@@ -1,4 +1,4 @@
-const CACHE_NAME = "apply-2027-__BUILD_HASH__";
+const CACHE_NAME = "kamiunity-__BUILD_HASH__";
 const GENERATED_ASSETS = [
   // __PRECACHE_START__
   // __PRECACHE_END__
@@ -7,9 +7,7 @@ const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/icon-maskable-512.png",
+  "./icons/kamiunity-icon.png",
   ...GENERATED_ASSETS,
 ];
 
@@ -21,7 +19,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
-      keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)),
+      keys.filter((key) => key !== CACHE_NAME && /^(apply-2027|kamiunity)-/.test(key)).map((key) => caches.delete(key)),
     )),
   );
   self.clients.claim();

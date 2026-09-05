@@ -1,4 +1,5 @@
-import { addDaysIso, db } from "./db.js";
+import { db } from "./db.js";
+import { applicationFromProgram, cleanProgram, ids, STATUS_OPTIONS } from "./workflow.js";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -71,7 +72,7 @@ export function downloadBlob(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function exportEncryptedBackup(data, password) {
+export async function createEncryptedBackup(data, password) {
   const documents = await Promise.all(data.documents.map(blobToRecord));
   const payload = JSON.stringify({
     format: "apply-2027-data",
@@ -94,16 +95,20 @@ export async function exportEncryptedBackup(data, password) {
     iv: bytesToBase64(iv),
     ciphertext: bytesToBase64(ciphertext),
   };
+  return new Blob([JSON.stringify(envelope)], { type: "application/json" });
+}
+
+export async function exportEncryptedBackup(data, password) {
   downloadBlob(
-    new Blob([JSON.stringify(envelope)], { type: "application/json" }),
-    `apply-2027-backup-${new Date().toISOString().slice(0, 10)}.applyvault`,
+    await createEncryptedBackup(data, password),
+    `kamiunity-backup-${new Date().toISOString().slice(0, 10)}.applyvault`,
   );
 }
 
 export async function readEncryptedBackup(file, password) {
   const envelope = JSON.parse(await file.text());
   if (envelope.format !== "apply-2027-encrypted-backup") {
-    throw new Error("This is not an Apply 2027 encrypted backup.");
+    throw new Error("This is not a supported Kamiunity encrypted backup.");
   }
   const salt = base64ToBytes(envelope.salt);
   const iv = base64ToBytes(envelope.iv);
@@ -142,15 +147,15 @@ export async function restoreBackup(data) {
       ]);
       if (data.programs?.length) await db.programs.bulkAdd(data.programs);
       if (data.applications?.length) await db.applications.bulkAdd(data.applications);
-      if (data.tasks?.length) await db.tasks.bulkAdd(data.tasks);
-      if (data.documents?.length) await db.documents.bulkAdd(data.documents);
+      if (data.tasks?.length) await db.tasks.bulkAdd(data.tasks.map((task) => ({ ...task, applicationIds: task.applicationIds ?? (task.applicationId ? [task.applicationId] : []) })));
+      if (data.documents?.length) await db.documents.bulkAdd(data.documents.map((document) => ({ ...document, linkedApplicationIds: document.linkedApplicationIds ?? (data.applications || []).filter((application) => document.linkedProgramIds?.includes(application.programId)).map((application) => application.id) })));
       await db.settings.put({ key: "seeded-v1", value: true });
       await db.settings.put({ key: "last-restore", value: new Date().toISOString() });
     },
   );
 }
 
-export async function exportWorkbook(data) {
+export async function buildWorkbook(data) {
   const XLSX = await import("xlsx");
   const programsById = new Map(data.programs.map((program) => [program.id, program]));
   const applicationsByProgram = new Map(
@@ -159,6 +164,7 @@ export async function exportWorkbook(data) {
   const programRows = data.programs.map((program) => {
     const application = applicationsByProgram.get(program.id);
     return {
+      "Program ID": program.id,
       University: program.name,
       Program: program.program,
       Country: program.country,
@@ -169,31 +175,90 @@ export async function exportWorkbook(data) {
       Tuition: program.tuition,
       Funding: program.funding,
       URL: program.url,
+      City: program.city || "",
+      Department: program.department || "",
+      "Degree level": program.degreeLevel || "",
+      Intake: program.intake || "",
+      Duration: program.duration || "",
+      Language: program.language || "",
+      "Study mode": program.studyMode || "",
+      "Deadline note": program.deadlineNote || "",
+      "Application portal": program.portalUrl || "",
+      "Admissions email": program.admissionsEmail || "",
+      "Application fee": program.applicationFee || "",
+      "Funding URL": program.fundingUrl || "",
+      Requirements: program.requirements || "",
+      "Language requirements": program.languageRequirements || "",
+      "Minimum GPA": program.minimumGpa || "",
+      "Professor name": program.professors?.[0]?.name || "",
+      "Professor email": program.professors?.[0]?.email || "",
+      "Professors (JSON)": JSON.stringify(program.professors || []),
       Notes: program.notes,
     };
   });
   const taskRows = data.tasks.map((task) => ({
+    "Task ID": task.id,
     Task: task.title,
+    "Program IDs": ids(task.programIds).join(", "),
+    "Application IDs": ids(task.applicationIds ?? (task.applicationId ? [task.applicationId] : [])).join(", "),
     University: programsById.get(task.programIds?.[0])?.name || "",
     Due: task.dueDate,
     Priority: task.priority,
     Done: task.done ? "Yes" : "No",
     Notes: task.note || "",
+    URL: task.url || "",
   }));
   const documentRows = data.documents.map((document) => ({
+    "Document ID": document.id,
     Document: document.name,
     Category: document.category,
     Updated: document.updatedAt,
     Version: document.version,
     Size: document.size,
-    "Linked applications": document.linkedProgramIds?.length || 0,
+    Readiness: document.status || "Draft",
+    Expires: document.expiresAt || "",
+    Notes: document.notes || "",
+    "File attached": document.blob ? "Yes — use encrypted backup for file contents" : "No",
+    "Program IDs": ids(document.linkedProgramIds).join(", "),
+    "Application IDs": ids(document.linkedApplicationIds).join(", "),
+    "Linked programs": (document.linkedProgramIds || []).map((id) => programsById.get(id)?.name || id).join("; "),
+    "Linked applications": ids(document.linkedApplicationIds).map((id) => { const application = data.applications.find((item) => item.id === id); return `${programsById.get(application?.programId)?.name || "Application"} #${id}`; }).join("; "),
   }));
+
+  const applicationRows = data.applications.map((application) => ({
+    "Application ID": application.id, "Program ID": application.programId,
+    University: programsById.get(application.programId)?.name || "",
+    Program: programsById.get(application.programId)?.program || "",
+    Status: application.status, Progress: application.progress || 0,
+    Priority: application.priority || programsById.get(application.programId)?.priority || "",
+    Intake: application.intake || "", Deadline: application.deadline || "",
+    "Deadline note": application.deadlineNote || "", "Application portal": application.portalUrl || "",
+    "Reference number": application.referenceNumber || "", "Application fee": application.applicationFee || "",
+    "Fee status": application.feeStatus || "", Funding: application.funding || "",
+    "Submission date": application.submittedAt || "", "Decision date": application.decisionDate || "", Decision: application.decision || "",
+    "Admissions email": application.admissionsEmail || "", Requirements: application.requirements || "",
+    "Professors (JSON)": JSON.stringify(application.professors || []), Notes: application.notes || "",
+    "Document IDs": data.documents.filter((document) => document.linkedApplicationIds?.includes(application.id)).map((document) => document.id).join(", "),
+    "Document checklist (JSON)": JSON.stringify(application.documentChecklist || []),
+  }));
+  const contactRows = [
+    ...data.programs.flatMap((program) => (program.professors || []).map((professor) => ({ Scope: "Program", "Record ID": program.id, University: program.name, Program: program.program, ...professor }))),
+    ...data.applications.flatMap((application) => (application.professors || []).map((professor) => ({ Scope: "Application", "Record ID": application.id, University: programsById.get(application.programId)?.name || "", Program: programsById.get(application.programId)?.program || "", ...professor }))),
+  ];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(programRows), "Programs");
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(applicationRows), "Applications");
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(contactRows), "Contacts");
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(taskRows), "Tasks");
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(documentRows), "Documents");
-  XLSX.writeFile(workbook, `apply-2027-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  return workbook;
+}
+
+export async function exportWorkbook(data) {
+  const XLSX = await import("xlsx");
+  const workbook = await buildWorkbook(data);
+  XLSX.writeFile(workbook, `kamiunity-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 function normalizedRow(row) {
@@ -211,6 +276,7 @@ function getValue(row, keys) {
 }
 
 function normalizeDate(value, XLSX) {
+  if (value === "" || value === null || value === undefined) return "";
   if (value instanceof Date && !Number.isNaN(value.valueOf())) {
     return value.toISOString().slice(0, 10);
   }
@@ -221,13 +287,23 @@ function normalizeDate(value, XLSX) {
     }
   }
   const parsed = new Date(value);
-  return Number.isNaN(parsed.valueOf()) ? addDaysIso(90) : parsed.toISOString().slice(0, 10);
+  return Number.isNaN(parsed.valueOf()) ? "" : parsed.toISOString().slice(0, 10);
+}
+
+function importProfessors(row) {
+  const json = getValue(row, ["professors (json)"]);
+  if (json) {
+    try { const contacts = JSON.parse(json); if (Array.isArray(contacts)) return contacts; } catch { /* Fall back to the spreadsheet's contact columns. */ }
+  }
+  const name = String(getValue(row, ["professor name", "professor", "supervisor"])).trim();
+  const email = String(getValue(row, ["professor email", "supervisor email"])).trim();
+  return name || email ? [{ name, email, url: String(getValue(row, ["professor website"])), lab: String(getValue(row, ["lab"])), notes: "", status: "Not contacted" }] : [];
 }
 
 export async function importWorkbook(file) {
   const XLSX = await import("xlsx");
   const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const sheet = workbook.Sheets.Programs || workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
   const mapped = rows
     .map(normalizedRow)
@@ -240,7 +316,23 @@ export async function importWorkbook(file) {
       priority: String(getValue(row, ["priority"]) || "Medium").trim(),
       tuition: String(getValue(row, ["tuition", "fee", "cost"])).trim(),
       funding: String(getValue(row, ["funding", "scholarship"])).trim(),
-      url: String(getValue(row, ["url", "link", "website"])).trim(),
+      url: String(getValue(row, ["program url", "program website", "url", "link", "website"])).trim(),
+      city: String(getValue(row, ["city", "campus"])),
+      department: String(getValue(row, ["department"])),
+      degreeLevel: String(getValue(row, ["degree level"])),
+      intake: String(getValue(row, ["intake", "term"])),
+      duration: String(getValue(row, ["duration"])),
+      language: String(getValue(row, ["language", "teaching language"])),
+      studyMode: String(getValue(row, ["study mode"])),
+      deadlineNote: String(getValue(row, ["deadline note", "time zone"])),
+      portalUrl: String(getValue(row, ["application portal", "portal url"])),
+      admissionsEmail: String(getValue(row, ["admissions email"])),
+      applicationFee: String(getValue(row, ["application fee"])),
+      fundingUrl: String(getValue(row, ["funding url", "funding website"])),
+      requirements: String(getValue(row, ["requirements"])),
+      languageRequirements: String(getValue(row, ["language requirements"])),
+      minimumGpa: String(getValue(row, ["minimum gpa"])),
+      professors: importProfessors(row),
       notes: String(getValue(row, ["notes", "note"])).trim(),
     }))
     .filter((row) => row.name && row.program);
@@ -251,23 +343,11 @@ export async function importWorkbook(file) {
 
   await db.transaction("rw", db.programs, db.applications, async () => {
     for (const row of mapped) {
-      const programId = await db.programs.add({
-        name: row.name,
-        program: row.program,
-        country: row.country || "Not specified",
-        deadline: row.deadline,
-        tuition: row.tuition || "Not added",
-        funding: row.funding || "Not added",
-        priority: ["High", "Medium", "Low"].includes(row.priority) ? row.priority : "Medium",
-        url: row.url,
-        notes: row.notes,
-      });
-      const supportedStatus = ["Researching", "Preparing", "Submitted", "Offer", "Decision"];
+      const program = cleanProgram(row);
+      const programId = await db.programs.add(program);
       await db.applications.add({
-        programId,
-        status: supportedStatus.includes(row.status) ? row.status : "Researching",
-        deadline: row.deadline,
-        progress: 0,
+        ...applicationFromProgram({ ...program, id: programId }),
+        status: STATUS_OPTIONS.includes(row.status) ? row.status : "Researching",
       });
     }
   });

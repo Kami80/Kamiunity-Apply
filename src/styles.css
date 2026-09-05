@@ -1518,3 +1518,96 @@ dd {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Connected workflow forms use the existing stone and teal surfaces. */
+dialog.modal-backdrop {
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  color: var(--ink);
+}
+dialog.modal-backdrop::backdrop { background: transparent; }
+.workflow-form { font-size: 0.875rem; }
+.workflow-field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
+.workflow-field > label,
+.workflow-form .upload-field { color: #4d5b5c; font-size: 0.875rem; font-weight: 700; }
+.workflow-form input,
+.workflow-form select,
+.workflow-form textarea { font-size: 0.9375rem; }
+.workflow-field small,
+.field-help { margin: 0; color: var(--muted); font-size: 0.8125rem; font-weight: 400; line-height: 1.6; }
+.field-full { grid-column: 1 / -1; }
+.form-section { min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 15px 17px; }
+.form-section > summary { color: var(--ink); cursor: pointer; font-size: 0.9375rem; font-weight: 750; }
+.form-section > summary::marker { color: var(--teal); }
+.form-section > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 5px; }
+.form-section[open] > summary { margin-bottom: 17px; }
+.section-fields { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
+.form-section > .field-help { margin-bottom: 14px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.section-heading h4 { margin: 0; font-size: 0.875rem; }
+.contacts-editor { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
+.contacts-editor > button { align-self: flex-start; }
+.contact-card { display: grid; gap: 14px; border-bottom: 1px solid var(--line); padding-bottom: 17px; }
+.link-picker { min-width: 0; margin: 0; border: 1px solid var(--line); border-radius: 12px; padding: 13px 16px 16px; }
+.link-picker > legend { max-width: 100%; padding-inline: 5px; color: var(--ink); font-size: 0.9375rem; font-weight: 750; }
+.link-picker > legend > span { margin-left: 12px; color: var(--teal); font-size: 0.8125rem; font-weight: 650; }
+.link-picker > .field-help { margin-bottom: 12px; }
+.picker-search { margin-bottom: 10px; }
+.picker-options { display: grid; max-height: 240px; overflow-y: auto; overscroll-behavior: contain; gap: 7px; padding: 3px; }
+.picker-option { display: flex; min-width: 0; align-items: center; gap: 7px; border: 1px solid transparent; border-radius: 9px; padding: 9px 10px; background: rgba(255, 255, 255, 0.2); }
+.picker-option.is-selected { border-color: #7b9e99; background: #e0ebe6; }
+.picker-option > label { display: flex; flex: 1; min-width: 0; align-items: center; gap: 12px; cursor: pointer; }
+.workflow-form .picker-option input,
+.workflow-form .checkbox-field input { flex: 0 0 19px; width: 19px; height: 19px; min-height: 19px; margin: 0; padding: 0; accent-color: var(--teal); }
+.picker-option label > span { display: grid; min-width: 0; gap: 4px; }
+.picker-option strong { font-size: 0.875rem; font-weight: 650; overflow-wrap: anywhere; }
+.picker-option small { color: #54625f; font-size: 0.8125rem; line-height: 1.4; }
+.workflow-form .checkbox-field { display: flex; flex-direction: row; align-items: center; gap: 12px; font-size: 0.875rem; }
+.inline-link { display: inline-flex; width: fit-content; align-items: center; gap: 5px; color: var(--teal); font-size: 0.8125rem; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+.source-summary { border-left: 3px solid var(--teal); border-radius: 8px; padding: 13px 16px; background: #e2eae5; }
+.source-summary h3 { margin: 7px 0; font-size: 1.1rem; }
+.source-summary p { margin: 0 0 7px; font-size: 0.875rem; line-height: 1.6; }
+.source-summary p:last-child { margin-bottom: 0; }
+.form-error { position: sticky; bottom: 85px; margin: 0; border: 1px solid #b05d4a; border-radius: 9px; padding: 12px; background: #fae9e3; color: #873626; font-size: 0.875rem; }
+.form-notice { margin: 10px 0 0; border: 1px solid #c3b293; border-radius: 9px; padding: 13px; background: #eee6d7; color: #655239; font-size: 0.875rem; line-height: 1.6; }
+.form-notice p { margin: 0 0 10px; }
+.workflow-form .upload-field { display: flex; flex-direction: column; gap: 10px; }
+.upload-field input[type="file"] { padding: 10px; }
+.selected-files { margin: 0; padding-left: 22px; }
+.selected-files li { padding: 5px 0; overflow-wrap: anywhere; }
+.selected-files li span { margin-left: 12px; color: var(--muted); font-size: 0.8125rem; }
+.workflow-footer { position: sticky; z-index: 2; bottom: -25px; flex-wrap: wrap; margin: 0 -5px -25px; padding: 17px 5px 25px; background: var(--canvas); }
+.workflow-footer .primary-button,
+.workflow-footer .secondary-button { font-size: 0.875rem; }
+.footer-extra { display: contents; }
+.footer-extra > button { order: -1; }
+.workflow-footer .danger-button { margin-right: auto; }
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+.record-link { display: flex; max-width: 100%; flex-direction: column; align-items: flex-start; gap: 5px; border: 0; padding: 0; background: transparent; text-align: left; cursor: pointer; }
+.record-link > strong { text-decoration: underline; text-decoration-color: #9faeaa; text-underline-offset: 4px; }
+.record-link:hover > strong { color: var(--teal); }
+.record-link > span { color: var(--muted); font-size: 0.75rem; }
+.data-table td > .inline-link { margin-top: 7px; }
+.record-actions { display: flex; align-items: center; gap: 8px; }
+.record-actions .secondary-button { white-space: nowrap; }
+.text-action { width: fit-content; border: 0; padding: 4px 0; background: transparent; color: var(--teal); text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.toolbar-filter { display: flex; align-items: center; gap: 8px; }
+.toolbar-filter select { min-height: 42px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--canvas); color: var(--ink); }
+.kanban-board { grid-template-columns: repeat(5, minmax(220px, 1fr)); }
+.document-detail .manage-links-button { width: 100%; margin-top: 12px; }
+button.linked-row { width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.document-notes { font-size: 0.875rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.document-detail dd { overflow-wrap: anywhere; }
+.expired-label { color: #943c2a; }
+@media (max-width: 560px) {
+  .workflow-footer { bottom: -20px; align-items: stretch; flex-direction: column-reverse; margin-bottom: -20px; padding-bottom: 20px; }
+  .form-section { padding: 13px; }
+  .link-picker { padding-inline: 10px; }
+  .contacts-editor > button { width: 100%; }
+  .form-error { position: static; }
+  .field-full { grid-column: auto; }
+}

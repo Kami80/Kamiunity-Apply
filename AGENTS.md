@@ -11,6 +11,15 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 ## Apply 2027 product direction
 
 - Build a completely free, static, local-first PWA suitable for GitHub Pages. Do not add paid APIs, accounts, analytics, or a hosted backend.
-- Use the selected deadline-first Today-screen mock at `design/reference-deadline-compass.png` as the visual source of truth.
+- Use `design/kamiunity/application-dossier.png` as the current Kamiunity visual source. The earlier deadline-first Today mock is retained as historical context.
 - Use restrained neumorphism with soft edges: warm stone surfaces, teal primary actions, high-contrast text, visible focus states, and shadows that are never the only state indicator.
 - Preserve spreadsheet-friendly workflows while prioritizing the student's next actions, deadlines, applications, programs, documents, calendar, and local backup.
+- Make the workflow editable and connected: programs need their own URL, admissions details, and professor contacts; applications can start from saved programs; documents can link to multiple programs and applications from either side. Preserve these richer details in local backups and spreadsheet exports.
+
+## Kamiunity brand direction
+
+- Rename and specialize this existing university application planner as Kamiunity; this is the same product, not a separate website.
+- Create a custom Kamiunity logo first, then make the interface and language specific to graduate applications, professor contacts, deadlines, and document readiness instead of a generic productivity dashboard.
+- Preserve the existing local-only storage, free static PWA architecture, and connected workflows through the rebrand.
+- Proceed with the second generated screen, `design/kamiunity/application-dossier.png`, as the main application workspace after the user's instruction to continue. Extend its brand and typography across the existing routes.
+- Use the generated logo at `design/kamiunity/kamiunity-logo.png`. In product copy, distinguish local device storage from encrypted backup files; do not repeat the mockup's inaccurate claim that all local storage is encrypted.

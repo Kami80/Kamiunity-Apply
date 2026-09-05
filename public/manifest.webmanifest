@@ -1,32 +1,21 @@
 {
-  "name": "Apply 2027 — Application workspace",
-  "short_name": "Apply 2027",
-  "description": "A private, offline-first graduate application tracker that lives on your device.",
-  "start_url": "./#/today",
+  "name": "Kamiunity — Graduate application workspace",
+  "short_name": "Kamiunity",
+  "description": "Your graduate applications, professor contacts, documents, and deadlines together on your device.",
+  "id": "./",
+  "start_url": "./#/applications",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f1ede8",
-  "theme_color": "#f1ede8",
+  "background_color": "#f5f2ee",
+  "theme_color": "#f7f4f0",
   "orientation": "any",
   "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "./icons/icon-192.png",
-      "sizes": "192x192",
+      "src": "./icons/kamiunity-icon.png",
+      "sizes": "1254x1254",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icons/icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }

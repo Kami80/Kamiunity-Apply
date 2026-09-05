@@ -10,6 +10,20 @@ db.version(1).stores({
   settings: "key",
 });
 
+db.version(2).stores({
+  documents: "++id,name,category,updatedAt,*linkedProgramIds,*linkedApplicationIds",
+}).upgrade(async (transaction) => {
+  const applications = await transaction.table("applications").toArray();
+  await transaction.table("documents").toCollection().modify((document) => {
+    document.linkedApplicationIds ??= applications
+      .filter((application) => document.linkedProgramIds?.includes(application.programId))
+      .map((application) => application.id);
+  });
+  await transaction.table("tasks").toCollection().modify((task) => {
+    task.applicationIds ??= task.applicationId ? [task.applicationId] : [];
+  });
+});
+
 export function toIsoDate(date) {
   const copy = new Date(date);
   copy.setMinutes(copy.getMinutes() - copy.getTimezoneOffset());
@@ -35,6 +49,8 @@ export async function seedDatabase() {
     db.documents,
     db.settings,
     async () => {
+      // Initialization can run twice in React Strict Mode or in two tabs.
+      if (await db.settings.get("seeded-v1")) return;
       await db.programs.bulkAdd([
         {
           id: 1,
@@ -156,6 +172,7 @@ export async function seedDatabase() {
           updatedAt: addDaysIso(-3),
           version: "1.2",
           linkedProgramIds: [1, 2, 3],
+          linkedApplicationIds: [1, 2, 3],
           blob: null,
           isExample: true,
         },
@@ -168,6 +185,7 @@ export async function seedDatabase() {
           updatedAt: addDaysIso(-7),
           version: "1.1",
           linkedProgramIds: [1, 2],
+          linkedApplicationIds: [1, 2],
           blob: null,
           isExample: true,
         },
@@ -180,6 +198,7 @@ export async function seedDatabase() {
           updatedAt: addDaysIso(-51),
           version: "1.0",
           linkedProgramIds: [1, 2, 3, 4],
+          linkedApplicationIds: [1, 2, 3, 4],
           blob: null,
           isExample: true,
         },
@@ -192,6 +211,7 @@ export async function seedDatabase() {
           updatedAt: addDaysIso(-5),
           version: "1.3",
           linkedProgramIds: [1],
+          linkedApplicationIds: [1],
           blob: null,
           isExample: true,
         },
