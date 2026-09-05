@@ -1,4 +1,5 @@
 import Dexie from "dexie";
+import { CATALOG_SOURCE_SETTING_KEY, DEFAULT_CATALOG_SOURCE, STARTER_CATALOG } from "./catalog-data.js";
 
 export const db = new Dexie("apply-2027");
 
@@ -24,6 +25,10 @@ db.version(2).stores({
   });
 });
 
+db.version(3).stores({
+  catalogPrograms: "++id,catalogId,name,program,country,degreeLevel,intake,deadline",
+});
+
 export function toIsoDate(date) {
   const copy = new Date(date);
   copy.setMinutes(copy.getMinutes() - copy.getTimezoneOffset());
@@ -39,7 +44,8 @@ export function addDaysIso(days, origin = new Date()) {
 
 export async function seedDatabase() {
   const seeded = await db.settings.get("seeded-v1");
-  if (seeded) return;
+  const catalogCount = await db.catalogPrograms.count();
+  if (seeded && catalogCount) return;
 
   await db.transaction(
     "rw",
@@ -47,11 +53,12 @@ export async function seedDatabase() {
     db.applications,
     db.tasks,
     db.documents,
+    db.catalogPrograms,
     db.settings,
     async () => {
       // Initialization can run twice in React Strict Mode or in two tabs.
-      if (await db.settings.get("seeded-v1")) return;
-      await db.programs.bulkAdd([
+      const alreadySeeded = await db.settings.get("seeded-v1");
+      if (!alreadySeeded) await db.programs.bulkAdd([
         {
           id: 1,
           name: "University of Toronto",
@@ -102,14 +109,14 @@ export async function seedDatabase() {
         },
       ]);
 
-      await db.applications.bulkAdd([
+      if (!alreadySeeded) await db.applications.bulkAdd([
         { id: 1, programId: 1, status: "Preparing", deadline: addDaysIso(41), progress: 62 },
         { id: 2, programId: 2, status: "Preparing", deadline: addDaysIso(58), progress: 75 },
         { id: 3, programId: 3, status: "Researching", deadline: addDaysIso(88), progress: 28 },
         { id: 4, programId: 4, status: "Researching", deadline: addDaysIso(133), progress: 20 },
       ]);
 
-      await db.tasks.bulkAdd([
+      if (!alreadySeeded) await db.tasks.bulkAdd([
         {
           id: 1,
           title: "Request official transcript",
@@ -162,7 +169,7 @@ export async function seedDatabase() {
         },
       ]);
 
-      await db.documents.bulkAdd([
+      if (!alreadySeeded) await db.documents.bulkAdd([
         {
           id: 1,
           name: "Official transcript.pdf",
@@ -217,18 +224,25 @@ export async function seedDatabase() {
         },
       ]);
 
-      await db.settings.put({ key: "seeded-v1", value: true });
+      if (!(await db.catalogPrograms.count())) {
+        await db.catalogPrograms.bulkAdd(STARTER_CATALOG.map((program) => ({ ...program })));
+        await db.settings.put({ key: CATALOG_SOURCE_SETTING_KEY, value: { ...DEFAULT_CATALOG_SOURCE } });
+      }
+
+      if (!alreadySeeded) await db.settings.put({ key: "seeded-v1", value: true });
     },
   );
 }
 
 export async function readAllData() {
-  const [programs, applications, tasks, documents] = await Promise.all([
+  const [programs, applications, tasks, documents, catalogPrograms, catalogSource] = await Promise.all([
     db.programs.toArray(),
     db.applications.toArray(),
     db.tasks.toArray(),
     db.documents.toArray(),
+    db.catalogPrograms.toArray(),
+    db.settings.get(CATALOG_SOURCE_SETTING_KEY),
   ]);
 
-  return { programs, applications, tasks, documents };
+  return { programs, applications, tasks, documents, catalogPrograms, catalogSource: catalogSource?.value || { ...DEFAULT_CATALOG_SOURCE } };
 }

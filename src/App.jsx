@@ -29,7 +29,9 @@ import { PrimaryButton } from "./ui.jsx";
 import kamiunityLogo from "./assets/kamiunity-logo.png";
 import { ApplicationChecklistForm, ApplicationWorkspace } from "./ApplicationWorkspace.jsx";
 import { ApplicationForm, DocumentForm, ExternalLink, ProgramForm, TaskForm } from "./WorkflowForms.jsx";
-import { applicationDocuments, deadlineEvents, STATUS_OPTIONS } from "./workflow.js";
+import { catalogToProgram, importCatalogCsv, programKey, replaceCatalog, syncCatalogFromUrl } from "./catalog.js";
+import { CATALOG_AUTO_SYNC_SETTING_KEY, DEFAULT_CATALOG_SOURCE, SHARED_CATALOG_SOURCE, STARTER_CATALOG } from "./catalog-data.js";
+import { applicationDocuments, deadlineEvents, saveProgram, STATUS_OPTIONS } from "./workflow.js";
 import {
   downloadBlob,
   exportEncryptedBackup,
@@ -244,34 +246,112 @@ function TodayPage({ data, openModal }) {
   );
 }
 
-function ProgramsPage({ data, openModal }) {
+function formatCatalogTimestamp(value) {
+  if (!value) return "Not synced yet";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "Not synced yet";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
+}
+
+function CatalogConnection({ source, catalogCount, syncCatalog, importCatalog, resetCatalog, notify }) {
+  const [open, setOpen] = useState(false);
+  const [inputUrl, setInputUrl] = useState(source?.inputUrl || "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const fileInput = useRef(null);
+  const isConnected = source?.mode === "google-sheet";
+  useEffect(() => { setInputUrl(source?.inputUrl || ""); }, [source?.inputUrl]);
+
+  async function connect(event) {
+    event.preventDefault();
+    if (!inputUrl.trim()) { setError("Paste a Google Sheet or public CSV URL."); return; }
+    setBusy(true); setError("");
+    try {
+      const result = await syncCatalog(inputUrl);
+      notify(`${result.records.length} program${result.records.length === 1 ? "" : "s"} synced${result.skipped.length ? ` · ${result.skipped.length} row${result.skipped.length === 1 ? "" : "s"} skipped` : ""}.`);
+      setOpen(false);
+    } catch (failure) { setError(failure.message || "The catalog could not be synced."); }
+    finally { setBusy(false); }
+  }
+
+  async function importFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBusy(true); setError("");
+    try {
+      const result = await importCatalog(await file.text(), file.name);
+      notify(`${result.records.length} program${result.records.length === 1 ? "" : "s"} imported${result.skipped.length ? ` · ${result.skipped.length} row${result.skipped.length === 1 ? "" : "s"} skipped` : ""}.`);
+      setOpen(false);
+    } catch (failure) { setError(failure.message || "The CSV could not be imported."); }
+    finally { setBusy(false); if (fileInput.current) fileInput.current.value = ""; }
+  }
+
+  async function useStarterCatalog() {
+    setBusy(true); setError("");
+    try { await resetCatalog(); notify("The starter catalog is ready. Verify every detail before applying."); setOpen(false); }
+    catch (failure) { setError(failure.message || "The starter catalog could not be restored."); }
+    finally { setBusy(false); }
+  }
+
+  const label = isConnected ? "Shared Google Sheet" : source?.mode === "file" ? "Imported CSV" : "Starter catalog";
+  return <section className="catalog-connection soft-inset" aria-labelledby="catalog-source-heading">
+    <div className="catalog-connection-copy"><span className="section-kicker">Program database</span><h2 id="catalog-source-heading">{label}</h2><p>{isConnected ? "Search the shared read-only catalog, then save programs to your private shortlist." : "Start with example records, or connect a published Google Sheet that your students can browse."}</p><small>{catalogCount} programs · {source?.lastSyncedAt ? `Last synced ${formatCatalogTimestamp(source.lastSyncedAt)}` : "Starter records are ready to replace"}{source?.skippedRows ? ` · ${source.skippedRows} rows skipped` : ""}</small></div>
+    <div className="catalog-connection-actions"><span className="catalog-source-chip"><Database size={18} />{isConnected ? "Read-only source" : "Local snapshot"}</span><button className="secondary-button soft-button" type="button" onClick={() => { setError(""); setOpen((value) => !value); }}>{open ? "Close source settings" : isConnected ? "Change source" : "Connect a sheet"}</button></div>
+    {open ? <form className="catalog-connect-form" onSubmit={connect}>
+      <label className="field-label">Published Google Sheet or CSV URL<input className="soft-inset" type="url" value={inputUrl} onChange={(event) => setInputUrl(event.target.value)} placeholder="https://docs.google.com/spreadsheets/d/..." autoComplete="off" /></label>
+      <p className="field-help">In Google Sheets, use <strong>File → Share → Publish to web</strong> and choose CSV. The sheet must be readable without signing in. Kamiunity only reads rows; student edits stay on this device.</p>
+      <div className="button-row"><PrimaryButton type="submit" disabled={busy}>{busy ? "Syncing…" : "Sync Google Sheet"}</PrimaryButton><input className="visually-hidden" ref={fileInput} type="file" accept=".csv,text/csv" onChange={importFile} /><button className="secondary-button soft-button" type="button" disabled={busy} onClick={() => fileInput.current?.click()}><UploadSimple size={20} /> Import CSV</button><button className="secondary-button" type="button" disabled={busy} onClick={useStarterCatalog}>Use starter catalog</button><a className="text-action catalog-template-link" href={`${import.meta.env.BASE_URL}kamiunity-program-database-template.csv`} download>Download sheet template</a></div>
+      {error ? <p className="form-error" role="alert">{error}</p> : null}
+    </form> : null}
+  </section>;
+}
+
+function ProgramsPage({ data, openModal, notify, addCatalogProgram, syncCatalog, importCatalog, resetCatalog }) {
+  const [view, setView] = useState("catalog");
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState("");
-  const filtered = data.programs.filter((program) => `${program.name} ${program.program} ${program.country} ${(program.professors || []).map((professor) => `${professor.name} ${professor.email}`).join(" ")}`.toLowerCase().includes(query.toLowerCase()) && (!priority || program.priority === priority));
+  const [country, setCountry] = useState("");
+  const [degree, setDegree] = useState("");
+  const [pendingCatalogId, setPendingCatalogId] = useState("");
+  const catalogPrograms = data.catalogPrograms || [];
+  const search = query.trim().toLowerCase();
+  const countries = useMemo(() => [...new Set(catalogPrograms.map((program) => program.country).filter(Boolean))].sort(), [catalogPrograms]);
+  const degrees = useMemo(() => [...new Set(catalogPrograms.map((program) => program.degreeLevel).filter(Boolean))].sort(), [catalogPrograms]);
+  const matchesCatalog = (program) => `${program.name} ${program.program} ${program.country} ${program.city} ${program.department} ${program.degreeLevel} ${program.intake} ${program.language} ${program.funding} ${program.requirements} ${(program.professors || []).map((professor) => `${professor.name} ${professor.email} ${professor.lab}`).join(" ")}`.toLowerCase().includes(search);
+  const filteredCatalog = catalogPrograms.filter((program) => matchesCatalog(program) && (!country || program.country === country) && (!degree || program.degreeLevel === degree));
+  const filteredShortlist = data.programs.filter((program) => `${program.name} ${program.program} ${program.country} ${(program.professors || []).map((professor) => `${professor.name} ${professor.email}`).join(" ")}`.toLowerCase().includes(search) && (!priority || program.priority === priority));
+  function savedProgramFor(catalogProgram) { return data.programs.find((program) => (catalogProgram.catalogId && program.catalogId === catalogProgram.catalogId) || programKey(program) === programKey(catalogProgram)); }
+  async function chooseCatalogProgram(catalogProgram, mode) {
+    const saved = savedProgramFor(catalogProgram);
+    const application = saved && data.applications.find((item) => item.programId === saved.id);
+    if (mode === "application" && application) { openModal({ type: "application", application }); return; }
+    setPendingCatalogId(catalogProgram.catalogId);
+    try { await addCatalogProgram(catalogProgram, mode); }
+    catch (failure) { notify(failure.message || "The program could not be added."); }
+    finally { setPendingCatalogId(""); }
+  }
   return (
     <div className="page">
-      <PageHeader eyebrow="Find your academic fit" title="Program shortlist" description="Keep program requirements, funding, and professor contacts in one place." action={<PrimaryButton onClick={() => openModal({ type: "add-program" })}>Add program</PrimaryButton>} />
+      <PageHeader eyebrow="Find your academic fit" title="Program shortlist" description="Search a shared program database, then bring the programs you want into your private application workspace." action={<PrimaryButton onClick={() => openModal({ type: "add-program" })}>Add program</PrimaryButton>} />
+      <CatalogConnection source={data.catalogSource} catalogCount={catalogPrograms.length} syncCatalog={syncCatalog} importCatalog={importCatalog} resetCatalog={resetCatalog} notify={notify} />
       <section className="workspace-panel soft-panel">
-        <div className="toolbar">
-          <label className="search-field soft-inset"><MagnifyingGlass size={22} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search programs..." aria-label="Search programs" /></label>
-          <label className="toolbar-filter"><Funnel size={20} /><select aria-label="Filter by priority" value={priority} onChange={(event) => setPriority(event.target.value)}><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select></label>
+        <div className="toolbar program-toolbar">
+          <div className="segmented soft-inset" aria-label="Program view"><button className={view === "catalog" ? "active" : ""} type="button" aria-pressed={view === "catalog"} onClick={() => setView("catalog")}>Browse database <span>{catalogPrograms.length}</span></button><button className={view === "shortlist" ? "active" : ""} type="button" aria-pressed={view === "shortlist"} onClick={() => setView("shortlist")}>My shortlist <span>{data.programs.length}</span></button></div>
+          <label className="search-field soft-inset"><MagnifyingGlass size={22} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={view === "catalog" ? "Search universities, degrees, countries…" : "Search saved programs…"} aria-label={view === "catalog" ? "Search the program database" : "Search saved programs"} /></label>
+          {view === "catalog" ? <div className="program-filter-row"><label className="toolbar-filter"><Funnel size={20} /><select aria-label="Filter by country" value={country} onChange={(event) => setCountry(event.target.value)}><option value="">All countries</option>{countries.map((item) => <option key={item}>{item}</option>)}</select></label><label className="toolbar-filter"><select aria-label="Filter by degree level" value={degree} onChange={(event) => setDegree(event.target.value)}><option value="">All degree levels</option>{degrees.map((item) => <option key={item}>{item}</option>)}</select></label></div> : <label className="toolbar-filter"><Funnel size={20} /><select aria-label="Filter by priority" value={priority} onChange={(event) => setPriority(event.target.value)}><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select></label>}
+          <span className="count-label">{view === "catalog" ? `${filteredCatalog.length} matches` : `${filteredShortlist.length} saved`}</span>
         </div>
-        {filtered.length ? (
-          <div className="data-table-wrap">
-            <table className="data-table">
-              <thead><tr><th>University & program</th><th>Country</th><th>Deadline</th><th>Tuition</th><th>Funding</th><th>Priority</th><th aria-label="Actions" /></tr></thead>
-              <tbody>{filtered.map((program) => (
-                <tr key={program.id}>
-                  <td><button className="record-link" type="button" onClick={() => openModal({ type: "program", program })}><strong>{program.name}</strong><span>{program.program}</span></button><ExternalLink url={program.url}>Program website</ExternalLink><span>{data.documents.filter((document) => document.linkedProgramIds?.includes(program.id)).length} documents · {program.professors?.length || 0} professors</span></td><td>{program.country || "Not added"}</td>
-                  <td><strong className="date-text">{formatShortDate(program.deadline)}</strong><span>{relativeDue(program.deadline)}</span></td>
-                  <td>{program.tuition || "Not added"}</td><td>{program.funding || "Not added"}</td>
-                  <td><span className={`priority-label ${program.priority?.toLowerCase()}`}>{program.priority}</span></td>
-                  <td><div className="record-actions"><button className="secondary-button soft-button" type="button" onClick={() => openModal({ type: "add-application", programId: program.id })}>Start application</button><button className="icon-button" type="button" onClick={() => openModal({ type: "program", program })} aria-label={`Edit ${program.name}`}><CaretRight size={22} /></button></div></td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        ) : <EmptyState title="No matching programs" description="Try a broader university, program, or country search." />}
+        {view === "catalog" ? filteredCatalog.length ? <div className="catalog-result-list">{filteredCatalog.map((catalogProgram) => {
+          const saved = savedProgramFor(catalogProgram);
+          const application = saved && data.applications.find((item) => item.programId === saved.id);
+          const pending = pendingCatalogId === catalogProgram.catalogId;
+          return <article className="catalog-result" key={catalogProgram.id || catalogProgram.catalogId}>
+            <div className="catalog-result-main"><span className="catalog-result-source">{catalogProgram.catalogSource || data.catalogSource?.label || "Program database"}</span><h3>{catalogProgram.name}</h3><p>{catalogProgram.program}</p><div className="catalog-result-meta"><span>{[catalogProgram.city, catalogProgram.country].filter(Boolean).join(", ") || "Location not added"}</span><span>{[catalogProgram.degreeLevel, catalogProgram.intake].filter(Boolean).join(" · ") || "Graduate program"}</span></div><ExternalLink url={catalogProgram.url}>Program website</ExternalLink></div>
+            <div className="catalog-result-details"><div><small>Deadline</small><strong className={catalogProgram.deadline ? "date-text" : "muted-value"}>{catalogProgram.deadline ? formatShortDate(catalogProgram.deadline) : "Verify date"}</strong><span>{catalogProgram.deadline ? relativeDue(catalogProgram.deadline) : "Not added"}</span></div><div><small>Funding</small><strong>{catalogProgram.funding || "Not added"}</strong><span>{catalogProgram.tuition || "Tuition not added"}</span></div></div>
+            <div className="catalog-result-actions">{saved ? <span className="catalog-saved"><CheckCircle size={19} />Saved to shortlist</span> : <button className="secondary-button soft-button" type="button" disabled={pending} onClick={() => chooseCatalogProgram(catalogProgram, "shortlist")}>{pending ? "Adding…" : "Add to shortlist"}</button>}{application ? <button className="text-action" type="button" onClick={() => openModal({ type: "application", application })}>Open application<CaretRight size={18} /></button> : <PrimaryButton disabled={pending} onClick={() => chooseCatalogProgram(catalogProgram, "application")}>{pending ? "Adding…" : "Start application"}</PrimaryButton>}</div>
+            {catalogProgram.catalogLastVerified ? <small className="catalog-verification">{catalogProgram.catalogLastVerified}</small> : null}
+          </article>;
+        })}</div> : <EmptyState title="No matching catalog programs" description="Try a broader search, clear a filter, or connect a different Google Sheet." /> : filteredShortlist.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>University & program</th><th>Country</th><th>Deadline</th><th>Tuition</th><th>Funding</th><th>Priority</th><th aria-label="Actions" /></tr></thead><tbody>{filteredShortlist.map((program) => <tr key={program.id}><td><button className="record-link" type="button" onClick={() => openModal({ type: "program", program })}><strong>{program.name}</strong><span>{program.program}</span></button><ExternalLink url={program.url}>Program website</ExternalLink><span>{data.documents.filter((document) => document.linkedProgramIds?.includes(program.id)).length} documents · {program.professors?.length || 0} professors</span></td><td>{program.country || "Not added"}</td><td><strong className="date-text">{formatShortDate(program.deadline)}</strong><span>{relativeDue(program.deadline)}</span></td><td>{program.tuition || "Not added"}</td><td>{program.funding || "Not added"}</td><td><span className={`priority-label ${program.priority?.toLowerCase()}`}>{program.priority}</span></td><td><div className="record-actions"><button className="secondary-button soft-button" type="button" onClick={() => openModal({ type: "add-application", programId: program.id })}>Start application</button><button className="icon-button" type="button" onClick={() => openModal({ type: "program", program })} aria-label={`Edit ${program.name}`}><CaretRight size={22} /></button></div></td></tr>)}</tbody></table></div> : <EmptyState title="No matching saved programs" description="Browse the database or add a program manually to start your shortlist." />}
       </section>
     </div>
   );
@@ -384,7 +464,7 @@ function CalendarPage({ data, openModal }) {
   const events = [...data.tasks.map((task) => ({ id: `task-${task.id}`, date: task.dueDate, title: task.title, type: task.done ? "Complete" : "Task", task })), ...deadlineEvents(data).map((event) => ({ ...event, date: event.deadline, title: `${event.program.name} · ${event.program.program}${event.application?.intake ? ` · ${event.application.intake}` : ""}`, type: event.application ? "Application deadline" : "Program deadline" }))].filter((event) => event.date).sort((a, b) => a.date.localeCompare(b.date));
   return (
     <div className="page">
-      <PageHeader eyebrow="Your admissions calendar" title="Deadlines" description="See what needs to happen before each application closes." />
+      <PageHeader eyebrow="Your admissions calendar" title="Deadlines" description="See what needs to happen before each application closes." action={<PrimaryButton onClick={() => openModal({ type: "add-task" })}>Add task</PrimaryButton>} />
       <section className="calendar-panel soft-panel">
         <div className="calendar-summary soft-inset"><CalendarBlank size={32} weight="duotone" /><div><span>Next deadline</span><strong>{events.find((event) => daysUntil(event.date) >= 0)?.title || "Nothing scheduled"}</strong></div></div>
         <div className="agenda-list">{events.map((event) => { const date = formatTaskDate(event.date); return (
@@ -476,9 +556,24 @@ export function App() {
   const [toast, setToast] = useState("");
   const [installPrompt, setInstallPrompt] = useState(null);
   async function refresh() { setData(await readAllData()); }
+  async function openWorkspace() {
+    await seedDatabase();
+    const initial = await readAllData();
+    const autoSync = await db.settings.get(CATALOG_AUTO_SYNC_SETTING_KEY);
+    const source = initial.catalogSource;
+    if (source?.mode === "google-sheet" && source.inputUrl) {
+      try { await syncCatalogFromUrl(source.inputUrl); } catch { /* Keep the last local snapshot when offline. */ }
+    } else if (!autoSync?.value) {
+      try {
+        await syncCatalogFromUrl(SHARED_CATALOG_SOURCE.inputUrl);
+        await db.settings.put({ key: CATALOG_AUTO_SYNC_SETTING_KEY, value: true });
+      } catch { /* Keep the starter snapshot and allow a later retry. */ }
+    }
+    return readAllData();
+  }
   useEffect(() => {
     let active = true;
-    seedDatabase().then(readAllData).then((value) => { if (active) { setData(value); setReady(true); } }).catch(() => { if (active) setLoadError("Could not open local storage. Close other Kamiunity tabs and try again."); });
+    openWorkspace().then((value) => { if (active) { setData(value); setReady(true); } }).catch(() => { if (active) setLoadError("Could not open local storage. Close other Kamiunity tabs and try again."); });
     return () => { active = false; };
   }, []);
   useEffect(() => {
@@ -492,13 +587,42 @@ export function App() {
   useEffect(() => { document.title = `Kamiunity — ${NAV_ITEMS.find((item) => item.id === route)?.label || (route === "today" ? "Today’s next steps" : "Backup & transfer")}`; }, [route]);
   function navigate(next) { window.location.hash = `/${next}`; setRoute(next); window.scrollTo({ top: 0, behavior: "smooth" }); }
   async function installApp() { if (!installPrompt) return; await installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null); }
-  const common = { data, refresh, notify: setToast, openModal: setModal, navigate };
+  async function syncProgramCatalog(inputUrl) {
+    const result = await syncCatalogFromUrl(inputUrl);
+    await refresh();
+    return result;
+  }
+  async function importProgramCatalog(text, label) {
+    const result = await importCatalogCsv(text, label);
+    await refresh();
+    return result;
+  }
+  async function resetProgramCatalog() {
+    await replaceCatalog(STARTER_CATALOG.map((program) => ({ ...program })), { ...DEFAULT_CATALOG_SOURCE, lastSyncedAt: null });
+    await db.settings.put({ key: CATALOG_AUTO_SYNC_SETTING_KEY, value: true });
+    await refresh();
+  }
+  async function addCatalogProgram(catalogProgram, mode = "shortlist") {
+    const existing = data.programs.find((program) => (catalogProgram.catalogId && program.catalogId === catalogProgram.catalogId) || programKey(program) === programKey(catalogProgram));
+    const programId = existing?.id || await saveProgram(catalogToProgram(catalogProgram), []);
+    const nextData = await readAllData();
+    setData(nextData);
+    if (mode === "application") {
+      const application = nextData.applications.find((item) => item.programId === programId);
+      if (application) setModal({ type: "application", application });
+      else setModal({ type: "add-application", programId });
+    } else {
+      setToast(existing ? "That program is already in your shortlist." : "Program added to your shortlist.");
+    }
+    return programId;
+  }
+  const common = { data, refresh, notify: setToast, openModal: setModal, navigate, addCatalogProgram, syncCatalog: syncProgramCatalog, importCatalog: importProgramCatalog, resetCatalog: resetProgramCatalog };
   const pages = { today: <TodayPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, documents: <DocumentsPage {...common} />, calendar: <CalendarPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} /> };
   if (!ready) return <main className="loading-screen"><img className="loading-brand" src={kamiunityLogo} alt="kamiunity" /><strong>{loadError ? "Your workspace could not open" : "Opening your application workspace…"}</strong><span role={loadError ? "alert" : undefined}>{loadError || "Your records stay on this device."}</span>{loadError ? <button className="secondary-button soft-button" type="button" onClick={() => window.location.reload()}>Try again</button> : null}</main>;
   return (
     <div className="app-shell kamiunity">
       <TopNavigation route={route} navigate={navigate} /><main className="app-main">{pages[route]}</main>
-      {["task", "add-task"].includes(modal?.type) ? <TaskForm key={`task-${modal.task?.id || "new"}`} {...common} task={modal.task} close={() => setModal(null)} /> : null}
+      {["task", "add-task"].includes(modal?.type) ? <TaskForm key={`task-${modal.task?.id || "new"}`} {...common} task={modal.task} applicationId={modal.applicationId} close={() => setModal(null)} /> : null}
       {["program", "add-program"].includes(modal?.type) ? <ProgramForm key={`program-${modal.program?.id || "new"}`} {...common} program={modal.program} close={() => setModal(null)} /> : null}
       {["application", "add-application"].includes(modal?.type) ? <ApplicationForm key={`application-${modal.application?.id || modal.programId || "new"}`} {...common} application={modal.application} programId={modal.programId} focusSection={modal.focusSection} close={() => setModal(null)} /> : null}
       {["document", "add-document"].includes(modal?.type) ? <DocumentForm key={`document-${modal.document?.id || "new"}`} {...common} document={modal.document} applicationId={modal.applicationId} onSaved={modal.onSaved} close={() => setModal(null)} /> : null}

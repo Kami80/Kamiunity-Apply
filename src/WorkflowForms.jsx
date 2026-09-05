@@ -162,9 +162,9 @@ export function DocumentForm({ data, document, applicationId, refresh, notify, c
   </form></Modal>;
 }
 
-export function TaskForm({ data, task, refresh, notify, close }) {
+export function TaskForm({ data, task, applicationId, refresh, notify, close }) {
   const [form, setForm] = useState(() => {
-    const applicationIds = task?.applicationIds ?? (task?.applicationId ? [task.applicationId] : []);
+    const applicationIds = task?.applicationIds ?? (task?.applicationId ? [task.applicationId] : !task && applicationId ? [applicationId] : []);
     const inheritedProgramIds = data.applications.filter((application) => applicationIds.includes(application.id)).map((application) => application.programId);
     return { title: "", dueDate: addDaysIso(7), priority: "Medium", note: "", url: "", done: false, ...task, applicationIds, programIds: task?.additionalProgramIds ?? (task?.programIds || []).filter((id) => !inheritedProgramIds.includes(id)) };
   });

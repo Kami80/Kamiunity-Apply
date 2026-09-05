@@ -1,4 +1,5 @@
 import { db } from "./db.js";
+import { CATALOG_SOURCE_SETTING_KEY, DEFAULT_CATALOG_SOURCE, STARTER_CATALOG } from "./catalog-data.js";
 import { applicationFromProgram, cleanProgram, ids, STATUS_OPTIONS } from "./workflow.js";
 
 const encoder = new TextEncoder();
@@ -137,6 +138,7 @@ export async function restoreBackup(data) {
     db.applications,
     db.tasks,
     db.documents,
+    db.catalogPrograms,
     db.settings,
     async () => {
       await Promise.all([
@@ -144,12 +146,19 @@ export async function restoreBackup(data) {
         db.applications.clear(),
         db.tasks.clear(),
         db.documents.clear(),
+        db.catalogPrograms.clear(),
       ]);
       if (data.programs?.length) await db.programs.bulkAdd(data.programs);
       if (data.applications?.length) await db.applications.bulkAdd(data.applications);
       if (data.tasks?.length) await db.tasks.bulkAdd(data.tasks.map((task) => ({ ...task, applicationIds: task.applicationIds ?? (task.applicationId ? [task.applicationId] : []) })));
       if (data.documents?.length) await db.documents.bulkAdd(data.documents.map((document) => ({ ...document, linkedApplicationIds: document.linkedApplicationIds ?? (data.applications || []).filter((application) => document.linkedProgramIds?.includes(application.programId)).map((application) => application.id) })));
+      if (Array.isArray(data.catalogPrograms)) {
+        if (data.catalogPrograms.length) await db.catalogPrograms.bulkAdd(data.catalogPrograms);
+      } else {
+        await db.catalogPrograms.bulkAdd(STARTER_CATALOG.map((program) => ({ ...program })));
+      }
       await db.settings.put({ key: "seeded-v1", value: true });
+      await db.settings.put({ key: CATALOG_SOURCE_SETTING_KEY, value: data.catalogSource || { ...DEFAULT_CATALOG_SOURCE } });
       await db.settings.put({ key: "last-restore", value: new Date().toISOString() });
     },
   );
@@ -241,6 +250,38 @@ export async function buildWorkbook(data) {
     "Document IDs": data.documents.filter((document) => document.linkedApplicationIds?.includes(application.id)).map((document) => document.id).join(", "),
     "Document checklist (JSON)": JSON.stringify(application.documentChecklist || []),
   }));
+  const catalogRows = (data.catalogPrograms || []).map((program) => ({
+    "Catalog ID": program.catalogId || program.id,
+    University: program.name,
+    Program: program.program,
+    Country: program.country || "",
+    City: program.city || "",
+    Department: program.department || "",
+    "Degree level": program.degreeLevel || "",
+    Intake: program.intake || "",
+    Duration: program.duration || "",
+    Language: program.language || "",
+    "Study mode": program.studyMode || "",
+    Deadline: program.deadline || "",
+    "Deadline note": program.deadlineNote || "",
+    "Program website": program.url || "",
+    "Application portal": program.portalUrl || "",
+    "Admissions email": program.admissionsEmail || "",
+    Tuition: program.tuition || "",
+    "Application fee": program.applicationFee || "",
+    Funding: program.funding || "",
+    "Funding website": program.fundingUrl || "",
+    Requirements: program.requirements || "",
+    "Language requirements": program.languageRequirements || "",
+    "Minimum GPA": program.minimumGpa || "",
+    "Professor name": program.professors?.[0]?.name || "",
+    "Professor email": program.professors?.[0]?.email || "",
+    "Professors (JSON)": JSON.stringify(program.professors || []),
+    Notes: program.notes || "",
+    Source: program.catalogSource || data.catalogSource?.label || "",
+    "Source URL": program.catalogSourceUrl || data.catalogSource?.url || "",
+    "Last verified": program.catalogLastVerified || "",
+  }));
   const contactRows = [
     ...data.programs.flatMap((program) => (program.professors || []).map((professor) => ({ Scope: "Program", "Record ID": program.id, University: program.name, Program: program.program, ...professor }))),
     ...data.applications.flatMap((application) => (application.professors || []).map((professor) => ({ Scope: "Application", "Record ID": application.id, University: programsById.get(application.programId)?.name || "", Program: programsById.get(application.programId)?.program || "", ...professor }))),
@@ -252,6 +293,7 @@ export async function buildWorkbook(data) {
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(contactRows), "Contacts");
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(taskRows), "Tasks");
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(documentRows), "Documents");
+  if (catalogRows.length) XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(catalogRows), "Program database");
   return workbook;
 }
 
@@ -303,7 +345,7 @@ function importProfessors(row) {
 export async function importWorkbook(file) {
   const XLSX = await import("xlsx");
   const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
-  const sheet = workbook.Sheets.Programs || workbook.Sheets[workbook.SheetNames[0]];
+  const sheet = workbook.Sheets.Programs || workbook.Sheets["Program database"] || workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
   const mapped = rows
     .map(normalizedRow)
@@ -334,6 +376,10 @@ export async function importWorkbook(file) {
       minimumGpa: String(getValue(row, ["minimum gpa"])),
       professors: importProfessors(row),
       notes: String(getValue(row, ["notes", "note"])).trim(),
+      catalogId: String(getValue(row, ["catalog id"])).trim(),
+      catalogSource: String(getValue(row, ["source", "source label"])).trim(),
+      catalogSourceUrl: String(getValue(row, ["source url", "source website"])).trim(),
+      catalogLastVerified: String(getValue(row, ["last verified", "verified date"])).trim(),
     }))
     .filter((row) => row.name && row.program);
 

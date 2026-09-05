@@ -15,6 +15,7 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Use restrained neumorphism with soft edges: warm stone surfaces, teal primary actions, high-contrast text, visible focus states, and shadows that are never the only state indicator.
 - Preserve spreadsheet-friendly workflows while prioritizing the student's next actions, deadlines, applications, programs, documents, calendar, and local backup.
 - Make the workflow editable and connected: programs need their own URL, admissions details, and professor contacts; applications can start from saved programs; documents can link to multiple programs and applications from either side. Preserve these richer details in local backups and spreadsheet exports.
+- Use the user's shared Google Sheet as the default read-only program catalogue feed, with the starter catalogue retained as the offline fallback.
 
 ## Kamiunity brand direction
 
@@ -23,3 +24,4 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Preserve the existing local-only storage, free static PWA architecture, and connected workflows through the rebrand.
 - Proceed with the second generated screen, `design/kamiunity/application-dossier.png`, as the main application workspace after the user's instruction to continue. Extend its brand and typography across the existing routes.
 - Use the generated logo at `design/kamiunity/kamiunity-logo.png`. In product copy, distinguish local device storage from encrypted backup files; do not repeat the mockup's inaccurate claim that all local storage is encrypted.
+- Keep an explicit Add task action in task areas, including application task panels with no upcoming tasks and the Deadlines page. Creating a task from an application should preselect that application.

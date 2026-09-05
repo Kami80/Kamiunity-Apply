@@ -3,7 +3,7 @@ import { db, toIsoDate } from "./db.js";
 export const STATUS_OPTIONS = ["Researching", "Preparing", "Submitted", "Offer", "Decision"];
 export const PRIORITIES = ["Low", "Medium", "High"];
 export const DOCUMENT_CATEGORIES = ["Academic", "Essays", "Identity", "Recommendations", "Test scores", "Financial", "Other"];
-export const PROGRAM_TEXT_FIELDS = ["name", "program", "country", "city", "department", "degreeLevel", "intake", "duration", "language", "studyMode", "deadline", "deadlineNote", "priority", "url", "portalUrl", "admissionsEmail", "tuition", "applicationFee", "funding", "fundingUrl", "requirements", "languageRequirements", "minimumGpa", "notes"];
+export const PROGRAM_TEXT_FIELDS = ["name", "program", "country", "city", "department", "degreeLevel", "intake", "duration", "language", "studyMode", "deadline", "deadlineNote", "priority", "url", "portalUrl", "admissionsEmail", "tuition", "applicationFee", "funding", "fundingUrl", "requirements", "languageRequirements", "minimumGpa", "notes", "catalogId", "catalogSource", "catalogSourceUrl", "catalogLastVerified"];
 export const APPLICATION_TEXT_FIELDS = ["deadline", "deadlineNote", "intake", "priority", "portalUrl", "applicationFee", "funding", "requirements", "admissionsEmail", "status", "referenceNumber", "feeStatus", "submittedAt", "decisionDate", "decision", "notes"];
 
 export function ids(values = []) {
