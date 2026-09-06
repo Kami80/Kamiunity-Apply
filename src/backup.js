@@ -1,4 +1,4 @@
-import { db } from "./db.js";
+import { db, PROFILE_LOOKUP_EMAIL_SETTING_KEY, PROFILE_SETTING_KEY } from "./db.js";
 import { CATALOG_SOURCE_SETTING_KEY, DEFAULT_CATALOG_SOURCE, STARTER_CATALOG } from "./catalog-data.js";
 import { applicationFromProgram, cleanProgram, ids, STATUS_OPTIONS } from "./workflow.js";
 
@@ -159,6 +159,10 @@ export async function restoreBackup(data) {
       }
       await db.settings.put({ key: "seeded-v1", value: true });
       await db.settings.put({ key: CATALOG_SOURCE_SETTING_KEY, value: data.catalogSource || { ...DEFAULT_CATALOG_SOURCE } });
+      await db.settings.delete(PROFILE_SETTING_KEY);
+      await db.settings.delete(PROFILE_LOOKUP_EMAIL_SETTING_KEY);
+      if (data.profile) await db.settings.put({ key: PROFILE_SETTING_KEY, value: data.profile });
+      if (data.profileLookupEmail) await db.settings.put({ key: PROFILE_LOOKUP_EMAIL_SETTING_KEY, value: data.profileLookupEmail });
       await db.settings.put({ key: "last-restore", value: new Date().toISOString() });
     },
   );

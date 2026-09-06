@@ -2,15 +2,19 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArrowRight,
+  ArrowSquareOut,
   CaretLeft,
   CalendarBlank,
   CalendarCheck,
   CaretRight,
+  ChatCircleText,
+  Check,
   CheckCircle,
   Clock,
+  Copy,
   Database,
   DownloadSimple,
-  FilePlus,
+  EnvelopeSimple,
   FileText,
   FileXls,
   FolderSimple,
@@ -20,14 +24,17 @@ import {
   Kanban,
   MagnifyingGlass,
   Plus,
+  Sparkle,
   Table,
   Trash,
   UploadSimple,
+  UsersThree,
+  VideoCamera,
   WarningCircle,
   X,
 } from "@phosphor-icons/react";
 import "@fontsource-variable/manrope";
-import { db, readAllData, seedDatabase } from "./db.js";
+import { db, PROFILE_LOOKUP_EMAIL_SETTING_KEY, PROFILE_SETTING_KEY, readAllData, seedDatabase } from "./db.js";
 import { PrimaryButton } from "./ui.jsx";
 import kamiunityLogo from "./assets/kamiunity-logo.png";
 import emptyApplication from "./assets/empty-application.png";
@@ -37,6 +44,7 @@ import { ApplicationForm, DocumentForm, ExternalLink, ProgramForm, TaskForm } fr
 import { catalogToProgram, importCatalogCsv, programKey, replaceCatalog, syncCatalogFromUrl } from "./catalog.js";
 import { CATALOG_AUTO_SYNC_SETTING_KEY, DEFAULT_CATALOG_SOURCE, SHARED_CATALOG_SOURCE, STARTER_CATALOG } from "./catalog-data.js";
 import { POLIMI_CATALOG } from "./polimi-data.js";
+import { fetchProfileSheet, findProfileByEmail, normalizeProfileEmail, PROFILE_FORM_URL } from "./profile.js";
 import { applicationDocuments, deadlineEvents, saveProgram, STATUS_OPTIONS } from "./workflow.js";
 import { isPolitecnicoDiMilano } from "./program-taxonomy.js";
 import {
@@ -49,11 +57,12 @@ import {
   restoreBackup,
 } from "./backup.js";
 
-const ROUTES = ["deadlines", "programs", "applications", "documents", "backup"];
+const ROUTES = ["deadlines", "programs", "applications", "services", "profile", "documents", "backup"];
 const NAV_ITEMS = [
   { id: "deadlines", label: "Deadlines", icon: CalendarCheck },
   { id: "applications", label: "My applications", icon: FolderSimple },
   { id: "programs", label: "Program shortlist", icon: GraduationCap },
+  { id: "services", label: "Services & contact", icon: ChatCircleText },
   { id: "documents", label: "Document vault", icon: FileText },
 ];
 
@@ -159,12 +168,23 @@ function comparePrograms(first, second, sort) {
   return 0;
 }
 
-function TopNavigation({ route, navigate, openModal }) {
+function TopNavigation({ route, navigate, profile }) {
   const navigateFromMobile = (nextRoute) => navigate(nextRoute);
+  const workspaceLocked = !hasCompletedProfile(profile);
+  const profileName = profile?.fullName?.trim() || "Your profile";
+  const profileInitials = profile?.fullName?.trim()
+    ? profile.fullName.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase()
+    : "?";
   return (
     <>
       <header className="topbar desktop-navigation">
-        <button className="brand" type="button" onClick={() => navigate("applications")} aria-label="Kamiunity — my applications"><img src={kamiunityLogo} alt="kamiunity" /></button>
+        <div className="topbar-identity">
+          <button className="brand" type="button" onClick={() => navigate("applications")} aria-label="Kamiunity — my applications"><img src={kamiunityLogo} alt="kamiunity" /></button>
+          <button className={`profile-nav-button ${route === "profile" ? "active" : ""}`} type="button" onClick={() => navigate("profile")} aria-current={route === "profile" ? "page" : undefined} aria-label={`Open profile for ${profileName}`} title="Profile">
+            <span className="profile-avatar" aria-hidden="true">{profileInitials}</span>
+            <span className="profile-nav-copy"><small>Profile</small><strong>{profileName}</strong></span>
+          </button>
+        </div>
         <nav className="topnav" aria-label="Primary navigation">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <button
@@ -172,6 +192,8 @@ function TopNavigation({ route, navigate, openModal }) {
               key={id}
               className={`nav-item ${route === id ? "active" : ""}`}
               aria-current={route === id ? "page" : undefined}
+              aria-disabled={workspaceLocked ? "true" : undefined}
+              disabled={workspaceLocked}
               onClick={() => navigate(id)}
             >
               <Icon size={24} weight={route === id ? "duotone" : "regular"} />
@@ -179,16 +201,17 @@ function TopNavigation({ route, navigate, openModal }) {
             </button>
           ))}
         </nav>
-        <div className="brand-utilities"><span><CheckCircle size={19} />Saved on this device</span><button className={`backup-nav-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigate("backup")} aria-label="Backup and transfer" title="Backup & transfer"><Archive size={21} /><span>Backup</span></button></div>
+        <div className="brand-utilities"><span><CheckCircle size={19} />Saved on this device</span><button className={`backup-nav-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigate("backup")} aria-label="Backup and transfer" title={workspaceLocked ? "Complete your profile first" : "Backup & transfer"} disabled={workspaceLocked}><Archive size={21} /><span>Backup</span></button></div>
       </header>
       <nav className="mobile-navigation" aria-label="Mobile navigation">
-        <button className={`mobile-backup-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("backup")} aria-label="Backup and transfer" title="Backup & transfer"><Archive size={21} weight={route === "backup" ? "duotone" : "regular"} /><span className="visually-hidden">Backup and transfer</span></button>
+        <button className={`mobile-profile-button ${route === "profile" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("profile")} aria-current={route === "profile" ? "page" : undefined} aria-label={`Open profile for ${profileName}`} title="Profile"><span className="profile-avatar" aria-hidden="true">{profileInitials}</span><span className="mobile-profile-name">{profileName}</span></button>
+        <button className={`mobile-backup-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("backup")} aria-label="Backup and transfer" title={workspaceLocked ? "Complete your profile first" : "Backup & transfer"} disabled={workspaceLocked}><Archive size={21} weight={route === "backup" ? "duotone" : "regular"} /><span className="visually-hidden">Backup and transfer</span></button>
         <div className="mobile-nav-bar">
-          <button className={`mobile-nav-item ${route === "applications" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("applications")} aria-current={route === "applications" ? "page" : undefined} aria-label="Applications" title="Applications"><span className="mobile-nav-icon"><FolderSimple size={23} weight={route === "applications" ? "duotone" : "regular"} /></span><span className="visually-hidden">Applications</span></button>
-          <button className={`mobile-nav-item ${route === "programs" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("programs")} aria-current={route === "programs" ? "page" : undefined} aria-label="Programs" title="Programs"><span className="mobile-nav-icon"><GraduationCap size={23} weight={route === "programs" ? "duotone" : "regular"} /></span><span className="visually-hidden">Programs</span></button>
-          <button className="mobile-nav-item mobile-nav-add" type="button" onClick={() => openModal({ type: "add-document" })} aria-label="Add document" title="Add document"><span className="mobile-nav-icon"><FilePlus size={27} weight="bold" /></span><span className="visually-hidden">Add document</span></button>
-          <button className={`mobile-nav-item ${route === "deadlines" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("deadlines")} aria-current={route === "deadlines" ? "page" : undefined} aria-label="Deadlines" title="Deadlines"><span className="mobile-nav-icon"><CalendarCheck size={23} weight={route === "deadlines" ? "duotone" : "regular"} /></span><span className="visually-hidden">Deadlines</span></button>
-          <button className={`mobile-nav-item ${route === "documents" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("documents")} aria-current={route === "documents" ? "page" : undefined} aria-label="Document vault" title="Document vault"><span className="mobile-nav-icon"><FileText size={23} weight={route === "documents" ? "duotone" : "regular"} /></span><span className="visually-hidden">Document vault</span></button>
+          <button className={`mobile-nav-item ${route === "applications" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("applications")} aria-current={route === "applications" ? "page" : undefined} aria-label="Applications" title={workspaceLocked ? "Complete your profile first" : "Applications"} disabled={workspaceLocked}><span className="mobile-nav-icon"><FolderSimple size={23} weight={route === "applications" ? "duotone" : "regular"} /></span><span className="visually-hidden">Applications</span></button>
+          <button className={`mobile-nav-item ${route === "programs" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("programs")} aria-current={route === "programs" ? "page" : undefined} aria-label="Programs" title={workspaceLocked ? "Complete your profile first" : "Programs"} disabled={workspaceLocked}><span className="mobile-nav-icon"><GraduationCap size={23} weight={route === "programs" ? "duotone" : "regular"} /></span><span className="visually-hidden">Programs</span></button>
+          <button className={`mobile-nav-item mobile-nav-services ${route === "services" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("services")} aria-current={route === "services" ? "page" : undefined} aria-label="Services and contact" title={workspaceLocked ? "Complete your profile first" : "Services & contact"} disabled={workspaceLocked}><span className="mobile-nav-icon"><ChatCircleText size={27} weight={route === "services" ? "duotone" : "bold"} /></span><span className="visually-hidden">Services and contact</span></button>
+          <button className={`mobile-nav-item ${route === "deadlines" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("deadlines")} aria-current={route === "deadlines" ? "page" : undefined} aria-label="Deadlines" title={workspaceLocked ? "Complete your profile first" : "Deadlines"} disabled={workspaceLocked}><span className="mobile-nav-icon"><CalendarCheck size={23} weight={route === "deadlines" ? "duotone" : "regular"} /></span><span className="visually-hidden">Deadlines</span></button>
+          <button className={`mobile-nav-item ${route === "documents" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("documents")} aria-current={route === "documents" ? "page" : undefined} aria-label="Document vault" title={workspaceLocked ? "Complete your profile first" : "Document vault"} disabled={workspaceLocked}><span className="mobile-nav-icon"><FileText size={23} weight={route === "documents" ? "duotone" : "regular"} /></span><span className="visually-hidden">Document vault</span></button>
         </div>
       </nav>
     </>
@@ -699,6 +722,412 @@ function DocumentsPage({ data, refresh, notify, openModal, navigate }) {
   );
 }
 
+const CONTACT_EMAIL = "kamyabsafaie80@gmail.com";
+const TELEGRAM_HANDLE = "SafaeiKamyab";
+const COMMUNITY_LINKS = [
+  { label: "Kamiunity Open Source", handle: "t.me/kamiunity_opensource", href: "https://t.me/kamiunity_opensource", description: "Build the tools together." },
+  { label: "Apply Europe Iran", handle: "t.me/ApplyEuropeIran", href: "https://t.me/ApplyEuropeIran", description: "Application ideas and updates." },
+];
+
+const SERVICE_OPTIONS = [
+  {
+    id: "meeting",
+    label: "Have a meeting",
+    eyebrow: "1:1 application guidance",
+    title: "Application planning meeting",
+    description: "Talk through your goals, shortlist, timeline, or next move with a clear agenda.",
+    icon: VideoCamera,
+    accent: "peach",
+    email: {
+      subject: "Meeting request — [Your name]",
+      body: `Hi Kamyab,
+
+My name is [Your name], and I’m planning to apply for [degree/program] at [university or country]. I’d like to book a meeting to discuss [what you need help with].
+
+My preferred times, including my timezone, are:
+1. [Option 1]
+2. [Option 2]
+
+My background and current application stage: [short context]
+
+Thank you,
+[Your name]
+[Your Telegram username or phone]`,
+    },
+    telegram: `Hi Kamyab! I’d like to book a meeting about my graduate application.
+
+Program or goal: [degree/program + university or country]
+What I need help with: [short description]
+Preferred times and timezone: [two or three options]
+
+My name is [Your name]. Thank you!`,
+  },
+  {
+    id: "resume",
+    label: "Build a resume",
+    eyebrow: "CV and profile storytelling",
+    title: "Resume / CV building",
+    description: "Turn your experience, projects, and goals into a focused academic or professional CV.",
+    icon: FileText,
+    accent: "blue",
+    email: {
+      subject: "Resume / CV building request — [Your name]",
+      body: `Hi Kamyab,
+
+I’d like help building or improving my resume/CV for [program, university, scholarship, or job].
+
+My target and deadline: [details]
+My current background: [degree, experience, projects, or skills]
+What I already have: [old CV, LinkedIn, portfolio, or notes]
+What I want to improve: [structure, wording, positioning, or all of it]
+
+I can share the relevant files and links. Please let me know the next step and an available time if a meeting would help.
+
+Best,
+[Your name]`,
+    },
+    telegram: `Hi Kamyab! I’d like help building or improving my resume/CV.
+
+Target: [program, university, scholarship, or job]
+Deadline: [date]
+My background: [degree, experience, projects, or skills]
+What I need help with: [structure, wording, positioning, or all of it]
+
+I can send my current CV and supporting links. What should I share first?`,
+  },
+  {
+    id: "sop",
+    label: "Write a motivation letter / SOP",
+    eyebrow: "Personal statement support",
+    title: "Motivation letter / SOP",
+    description: "Shape your story, evidence, and goals into a convincing statement for the right audience.",
+    icon: Sparkle,
+    accent: "amber",
+    email: {
+      subject: "Motivation letter / SOP support — [Your name]",
+      body: `Hi Kamyab,
+
+I’d like help with a motivation letter or SOP for [program and university].
+
+Application deadline: [date]
+Required length or prompt: [word count / prompt]
+Why this program fits me: [your notes]
+My relevant experience: [projects, research, work, or achievements]
+My future goal: [short-term and long-term direction]
+Current draft or ideas: [attach or summarize]
+
+I’d appreciate help with the structure, clarity, and positioning of my story.
+
+Best,
+[Your name]`,
+    },
+    telegram: `Hi Kamyab! I’d like help with a motivation letter/SOP for [program + university].
+
+Deadline: [date]
+Prompt or word limit: [details]
+My background and goals: [short summary]
+Current draft: [ready / not yet]
+
+I can send my notes or draft. What would you like to see first?`,
+  },
+  {
+    id: "review",
+    label: "Review my application",
+    eyebrow: "Application package check",
+    title: "Application package review",
+    description: "Get a second look at your documents, fit, timeline, and next actions before you submit.",
+    icon: UsersThree,
+    accent: "sage",
+    email: {
+      subject: "Application package review — [Your name]",
+      body: `Hi Kamyab,
+
+I’d like a review of my application package for [program and university].
+
+Deadline: [date]
+Current stage: [researching / preparing / ready to submit]
+Documents I have: [CV, transcript, motivation letter/SOP, recommendation letters, etc.]
+Main questions: [fit, missing pieces, clarity, timeline, or submission requirements]
+
+I can share the documents and program link for context. Please let me know how we can start.
+
+Best,
+[Your name]`,
+    },
+    telegram: `Hi Kamyab! Could you review my application package for [program + university]?
+
+Deadline: [date]
+Current stage: [researching / preparing / ready to submit]
+Documents ready: [list]
+My main questions: [fit, missing pieces, clarity, or timeline]
+
+I can send the program link and files here. Thank you!`,
+  },
+];
+
+function ServicesPage({ notify }) {
+  const [serviceId, setServiceId] = useState(SERVICE_OPTIONS[0].id);
+  const [channel, setChannel] = useState("email");
+  const [copied, setCopied] = useState(false);
+  const selectedService = SERVICE_OPTIONS.find((service) => service.id === serviceId) || SERVICE_OPTIONS[0];
+  const templateText = channel === "email" ? selectedService.email.body : selectedService.telegram;
+  const copyText = channel === "email" ? `Subject: ${selectedService.email.subject}\n\n${selectedService.email.body}` : selectedService.telegram;
+
+  useEffect(() => { setCopied(false); }, [serviceId, channel]);
+
+  async function copyTemplate() {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(copyText);
+      setCopied(true);
+      notify("Template copied to your clipboard.");
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch {
+      notify("Copy is unavailable here. Select the template text manually.");
+    }
+  }
+
+  function chooseService(id) {
+    setServiceId(id);
+    window.requestAnimationFrame(() => document.getElementById("template-studio")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  return (
+    <div className="page services-page">
+      <PageHeader
+        eyebrow="People behind the paperwork"
+        title="Services & contact"
+        description="Bring the question, draft, or half-finished idea. We can turn it into a clear next step."
+        localMessage="Direct contact · no form required"
+        action={<div className="services-page-actions"><a className="primary-button" href={`mailto:${CONTACT_EMAIL}`}><EnvelopeSimple size={19} />Email me</a><a className="secondary-button soft-button" href={`https://t.me/${TELEGRAM_HANDLE}`} target="_blank" rel="noreferrer"><ChatCircleText size={19} />Telegram</a></div>}
+      />
+
+      <section className="services-hero soft-panel" aria-labelledby="services-hero-title">
+        <div className="services-hero-copy">
+          <span className="section-kicker">A little help, right when it matters</span>
+          <h2 id="services-hero-title">Make your application feel more like a plan.</h2>
+          <p>Whether you need a focused meeting, a stronger resume, or a thoughtful motivation letter, start with a short message and we’ll figure out the right next step together.</p>
+          <div className="services-hero-points"><span><CheckCircle size={18} />Practical, student-focused support</span><span><CheckCircle size={18} />Clear drafts and next actions</span></div>
+        </div>
+        <aside className="services-contact-card">
+          <span className="services-contact-stamp"><Sparkle size={26} weight="duotone" /></span>
+          <span className="section-kicker">Reach out directly</span>
+          <h3>Let’s work on the next piece together.</h3>
+          <div className="services-contact-links">
+            <a className="services-contact-link" href={`mailto:${CONTACT_EMAIL}`}><span className="services-contact-link-icon"><EnvelopeSimple size={19} /></span><span><small>Email</small><strong>{CONTACT_EMAIL}</strong></span><ArrowSquareOut size={17} /></a>
+            <a className="services-contact-link" href={`https://t.me/${TELEGRAM_HANDLE}`} target="_blank" rel="noreferrer"><span className="services-contact-link-icon"><ChatCircleText size={19} /></span><span><small>Telegram</small><strong>@{TELEGRAM_HANDLE}</strong></span><ArrowSquareOut size={17} /></a>
+          </div>
+          <small className="services-contact-note">Share your target program, deadline, and what feels difficult right now.</small>
+        </aside>
+      </section>
+
+      <section className="services-offerings" aria-labelledby="services-offerings-title">
+        <div className="services-section-heading"><div><span className="section-kicker">Ways I can help</span><h2 id="services-offerings-title">Choose the kind of support you need.</h2></div><p>You can start with a meeting or send a prepared message using the generator below.</p></div>
+        <div className="service-offer-grid">
+          {SERVICE_OPTIONS.map(({ id, eyebrow, title, description, icon: Icon, accent }) => (
+            <article className={`service-offer service-offer-${accent} soft-panel`} key={id}>
+              <span className="service-offer-icon"><Icon size={25} weight="duotone" /></span>
+              <span className="service-offer-eyebrow">{eyebrow}</span>
+              <h3>{title}</h3>
+              <p>{description}</p>
+              <button className="text-action service-offer-action" type="button" onClick={() => chooseService(id)}>Use a message template <ArrowRight size={16} /></button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="template-studio soft-panel" id="template-studio" aria-labelledby="template-studio-title">
+        <div className="template-studio-heading"><div><span className="section-kicker">Copy-ready outreach</span><h2 id="template-studio-title">Generate the right first message.</h2><p>Pick a goal and a channel. Replace the bracketed prompts with your details, then send it.</p></div><span className="template-ready"><CheckCircle size={18} />Ready to copy</span></div>
+        <div className="template-studio-grid">
+          <div className="template-studio-sidebar">
+            <span className="template-label">What do you need?</span>
+            <div className="template-service-list" role="tablist" aria-label="Message template type">
+              {SERVICE_OPTIONS.map(({ id, label, eyebrow, icon: Icon, accent }) => <button className={`template-service-button ${serviceId === id ? "active" : ""}`} type="button" role="tab" aria-selected={serviceId === id} key={id} onClick={() => setServiceId(id)}><span className={`template-service-icon ${accent}`}><Icon size={21} weight="duotone" /></span><span><strong>{label}</strong><small>{eyebrow}</small></span><CaretRight size={18} /></button>)}
+            </div>
+            <div className="template-channel-switch"><span className="template-label">Send it via</span><div className="segmented soft-inset"><button className={channel === "email" ? "active" : ""} type="button" onClick={() => setChannel("email")} aria-pressed={channel === "email"}><EnvelopeSimple size={17} />Email</button><button className={channel === "telegram" ? "active" : ""} type="button" onClick={() => setChannel("telegram")} aria-pressed={channel === "telegram"}><ChatCircleText size={17} />Telegram</button></div></div>
+          </div>
+          <div className="template-preview">
+            <div className="template-preview-heading"><div><span>Generated {channel === "email" ? "email" : "Telegram message"}</span><h3>{selectedService.label}</h3></div><button className="secondary-button soft-button" type="button" onClick={copyTemplate}>{copied ? <Check size={18} /> : <Copy size={18} />}{copied ? "Copied" : "Copy template"}</button></div>
+            {channel === "email" ? <div className="template-email-meta"><div><span>To</span><strong>{CONTACT_EMAIL}</strong></div><div><span>Subject</span><strong>{selectedService.email.subject}</strong></div></div> : <div className="template-telegram-meta"><ChatCircleText size={20} /><span>To <strong>@{TELEGRAM_HANDLE}</strong></span></div>}
+            <textarea className="template-textarea" readOnly value={templateText} onFocus={(event) => event.currentTarget.select()} aria-label={`${selectedService.label} ${channel} template`} />
+            <div className="template-preview-footer"><span>Replace the text in [brackets] with your details. The copy button includes the email subject.</span>{channel === "email" ? <a className="text-action" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(selectedService.email.subject)}&body=${encodeURIComponent(selectedService.email.body)}`}>Open email <ArrowSquareOut size={16} /></a> : <a className="text-action" href={`https://t.me/${TELEGRAM_HANDLE}`} target="_blank" rel="noreferrer">Open Telegram <ArrowSquareOut size={16} /></a>}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="services-community soft-inset" aria-labelledby="services-community-title">
+        <div><span className="section-kicker">Stay connected</span><h2 id="services-community-title">More Kamiunity, beyond your application list.</h2><p>Join the communities for open-source updates, application conversations, and new resources.</p></div>
+        <div className="community-link-grid">{COMMUNITY_LINKS.map(({ label, handle, href, description }) => <a className="community-link" href={href} target="_blank" rel="noreferrer" key={href}><span className="community-link-icon"><ChatCircleText size={20} /></span><span><strong>{label}</strong><small>{handle} · {description}</small></span><ArrowSquareOut size={18} /></a>)}</div>
+      </section>
+    </div>
+  );
+}
+
+function profileInitials(profile) {
+  if (!profile?.fullName?.trim()) return "?";
+  return profile.fullName.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function hasCompletedProfile(profile) {
+  return Boolean(profile?.email && profile?.fullName?.trim());
+}
+
+function ProfilePage({ data, refresh, notify, locked = false }) {
+  const savedEmail = data.profile?.email || data.profileLookupEmail || "";
+  const [email, setEmail] = useState(savedEmail);
+  const [showEmailEditor, setShowEmailEditor] = useState(!savedEmail);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
+  const autoSyncEmail = useRef("");
+  const profile = data.profile;
+  const profileReady = hasCompletedProfile(profile);
+
+  useEffect(() => {
+    const nextEmail = data.profile?.email || data.profileLookupEmail || "";
+    setEmail(nextEmail);
+    if (data.profile?.email) setShowEmailEditor(false);
+  }, [data.profile?.email, data.profileLookupEmail]);
+
+  async function syncProfileByEmail(inputEmail, { silent = false } = {}) {
+    const targetEmail = normalizeProfileEmail(inputEmail);
+    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+      if (!silent) {
+        setError("Enter the same email address used when submitting the Google Form.");
+        setStatus("");
+      }
+      return false;
+    }
+    autoSyncEmail.current = targetEmail;
+    setBusy(true);
+    if (!silent) {
+      setError("");
+      setStatus("");
+    }
+    try {
+      // Remember the email before the network request so a return visit can
+      // reuse it even if the sheet is temporarily unavailable.
+      await db.settings.put({ key: PROFILE_LOOKUP_EMAIL_SETTING_KEY, value: targetEmail });
+      const result = await fetchProfileSheet();
+      const match = findProfileByEmail(result.records, targetEmail);
+      if (!match) {
+        if (!silent) {
+          await db.settings.delete(PROFILE_SETTING_KEY);
+          await refresh();
+          setShowEmailEditor(true);
+          setStatus(`No profile response matched ${targetEmail}. Submit the form first, then sync again.`);
+        }
+        return false;
+      }
+      await db.settings.put({ key: PROFILE_SETTING_KEY, value: { ...match, email: targetEmail, source: "Google Form response sheet", syncedAt: new Date().toISOString() } });
+      await refresh();
+      setEmail(targetEmail);
+      setShowEmailEditor(false);
+      if (!silent) {
+        setStatus(`Profile synced from response row ${match.rowNumber}.`);
+        notify("Your profile was updated on this device.");
+      }
+      return true;
+    } catch (failure) {
+      if (!silent) setError(failure.message || "The profile sheet could not be synced.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    const rememberedEmail = normalizeProfileEmail(data.profile?.email || data.profileLookupEmail);
+    if (!rememberedEmail || autoSyncEmail.current === rememberedEmail) return undefined;
+    autoSyncEmail.current = rememberedEmail;
+    void syncProfileByEmail(rememberedEmail, { silent: true });
+    return undefined;
+  }, [data.profile?.email, data.profileLookupEmail]);
+
+  useEffect(() => {
+    const rememberedEmail = normalizeProfileEmail(data.profile?.email || data.profileLookupEmail);
+    if (!rememberedEmail || profileReady) return undefined;
+    const handleReturnToApp = () => { void syncProfileByEmail(rememberedEmail, { silent: true }); };
+    window.addEventListener("focus", handleReturnToApp);
+    return () => window.removeEventListener("focus", handleReturnToApp);
+  }, [data.profile?.email, data.profileLookupEmail, profileReady]);
+
+  async function syncProfile(event) {
+    event.preventDefault();
+    await syncProfileByEmail(email || data.profile?.email || data.profileLookupEmail);
+  }
+
+  async function openProfileForm() {
+    const targetEmail = normalizeProfileEmail(email || data.profile?.email || data.profileLookupEmail);
+    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+      setError("Enter your email once before opening the Google Form.");
+      setStatus("");
+      return;
+    }
+    // Open in the click handler before awaiting IndexedDB so popup blockers do
+    // not mistake the form tab for an unsolicited window.
+    window.open(PROFILE_FORM_URL, "_blank", "noopener,noreferrer");
+    await db.settings.put({ key: PROFILE_LOOKUP_EMAIL_SETTING_KEY, value: targetEmail });
+    setEmail(targetEmail);
+    await refresh();
+  }
+
+  async function clearProfile() {
+    await db.settings.delete(PROFILE_SETTING_KEY);
+    await db.settings.delete(PROFILE_LOOKUP_EMAIL_SETTING_KEY);
+    await refresh();
+    autoSyncEmail.current = "";
+    setEmail("");
+    setShowEmailEditor(true);
+    setStatus("The local profile has been cleared. Your Google Form response was not changed.");
+    setError("");
+  }
+
+  const name = profile?.fullName || "Your profile is ready for its first update";
+  return (
+    <div className="page profile-page">
+      <PageHeader
+        eyebrow="Your personal application identity"
+        title={profileReady ? profile.fullName : "Unlock your workspace"}
+        description={locked ? "Create your profile through the Google Form, then sync it once to unlock programs, applications, deadlines, documents, and services." : profileReady ? "Your connected profile is restored from this browser and can be refreshed whenever your details change." : "Keep your academic background in one place and refresh it from your Google Form whenever something changes."}
+        localMessage={profileReady && profile.syncedAt ? `Synced ${formatCatalogTimestamp(profile.syncedAt)}` : "Stored only on this device"}
+        action={<button className="primary-button" type="button" onClick={openProfileForm}><ArrowSquareOut size={19} />Open Google Form</button>}
+      />
+
+      {locked ? <div className="profile-access-gate soft-inset" role="status"><span className="profile-access-gate-icon"><WarningCircle size={22} weight="duotone" /></span><div><strong>Complete your profile to unlock Kamiunity.</strong><p>Submit the form, return here, and sync the response. Your matched profile will unlock the rest of the app on this browser.</p></div></div> : null}
+
+      <section className="profile-hero soft-panel" aria-labelledby="profile-hero-title">
+        <div className="profile-hero-identity"><span className="profile-large-avatar" aria-hidden="true">{profileInitials(profile)}</span><div><span className="section-kicker">Your profile card</span><h2 id="profile-hero-title">{name}</h2><p>{profileReady ? "This is the profile currently matched to your form response on this browser." : savedEmail ? "Your email is remembered on this browser. Submit the form, then refresh the saved connection." : "Submit the short form, then enter your form email below to bring your details into Kamiunity."}</p></div></div>
+        <div className={`profile-sync-badge ${profileReady ? "is-synced" : ""}`}><CheckCircle size={20} />{profileReady ? "Workspace unlocked" : "Profile setup required"}</div>
+      </section>
+
+      <div className="profile-grid">
+        <section className="profile-sync-card soft-panel" aria-labelledby="profile-sync-title">
+          <div className="profile-card-heading"><span className="profile-card-icon profile-card-icon-peach"><Sparkle size={23} weight="duotone" /></span><div><span className="section-kicker">Google Form sync</span><h2 id="profile-sync-title">Update your profile</h2></div></div>
+          <p>{savedEmail ? "Your email is saved on this browser, so you do not need to enter it again. Open the form when you need to change your details, then refresh the connection." : locked ? "Open the form, submit your details, then sync the response. Once a matched profile is found, the rest of Kamiunity unlocks immediately." : "Open the form, submit your details, then sync the response using the same email. Kamiunity remembers the connection locally on this browser."}</p>
+          {!showEmailEditor && savedEmail ? <div className="profile-connected-state">
+            <div className="profile-connected-summary"><span className="profile-connected-icon"><CheckCircle size={22} weight="duotone" /></span><div><span className="section-kicker">{profileReady ? "Connected on this browser" : "Email saved on this browser"}</span><strong>{savedEmail}</strong><small>{profileReady ? "Your profile is restored automatically when you return." : "Refresh after submitting the form to find your profile."}</small></div></div>
+            <div className="profile-form-actions"><button className="primary-button" type="button" onClick={() => syncProfileByEmail(savedEmail)} disabled={busy}>{busy ? "Refreshing…" : "Refresh profile"}<ArrowRight size={18} /></button><button className="secondary-button soft-button" type="button" onClick={() => { setShowEmailEditor(true); setError(""); setStatus(""); }}>Change email</button></div>
+          </div> : <form className="profile-sync-form" onSubmit={syncProfile}>
+            <label className="profile-email-field"><span>Email used in the Google Form</span><input className="soft-inset" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" /></label>
+            <small className="profile-form-hint">Enable “Collect email addresses” in Google Forms so each response can be matched safely.</small>
+            <div className="profile-form-actions"><button className="secondary-button soft-button" type="button" onClick={openProfileForm}><ArrowSquareOut size={18} />Open form first</button><button className="primary-button" type="submit" disabled={busy}>{busy ? "Syncing…" : "Save and sync profile"}<ArrowRight size={18} /></button></div>
+          </form>}
+          {error ? <div className="profile-notice profile-notice-error" role="alert"><WarningCircle size={19} />{error}</div> : null}
+          {status ? <div className="profile-notice profile-notice-status" role="status"><CheckCircle size={19} />{status}</div> : null}
+          {profile ? <button className="text-action profile-clear-action" type="button" onClick={clearProfile}>Clear local profile</button> : null}
+        </section>
+
+        <aside className="profile-details-card soft-panel" aria-labelledby="profile-details-title">
+          <div className="profile-card-heading"><span className="profile-card-icon profile-card-icon-blue"><UsersThree size={23} weight="duotone" /></span><div><span className="section-kicker">Matched details</span><h2 id="profile-details-title">What the app knows</h2></div></div>
+          {profile ? <dl className="profile-details-list"><div><dt>Full name</dt><dd>{profile.fullName || "Not provided"}</dd></div><div><dt>Last degree</dt><dd>{profile.lastDegree || "Not provided"}</dd></div><div><dt>University</dt><dd>{profile.university || "Not provided"}</dd></div><div><dt>Program</dt><dd>{profile.programName || "Not provided"}</dd></div><div><dt>Matched email</dt><dd>{profile.email}</dd></div><div><dt>Form response</dt><dd>{profile.submittedAt || `Row ${profile.rowNumber}`}</dd></div></dl> : <div className="profile-details-empty"><Database size={30} weight="duotone" /><strong>No matched profile yet.</strong><p>Once a response is matched, your name, degree, university, and program will appear here.</p></div>}
+        </aside>
+      </div>
+
+    </div>
+  );
+}
+
 function BackupPage({ data, refresh, notify, installPrompt, installApp }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -771,7 +1200,7 @@ function BackupPage({ data, refresh, notify, installPrompt, installApp }) {
 
 export function App() {
   const [route, setRoute] = useState(currentRoute);
-  const [data, setData] = useState({ programs: [], applications: [], tasks: [], documents: [] });
+  const [data, setData] = useState({ programs: [], applications: [], tasks: [], documents: [], profile: null, profileLookupEmail: "" });
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [modal, setModal] = useState(null);
@@ -822,9 +1251,28 @@ export function App() {
     window.addEventListener("hashchange", handleHash); window.addEventListener("beforeinstallprompt", handleInstall);
     return () => { window.removeEventListener("hashchange", handleHash); window.removeEventListener("beforeinstallprompt", handleInstall); };
   }, []);
+  const profileUnlocked = hasCompletedProfile(data.profile);
+  useEffect(() => {
+    if (!ready || profileUnlocked || route === "profile") return;
+    window.location.hash = "/profile";
+    setRoute("profile");
+    setToast("Complete your profile to unlock the workspace.");
+    setModal(null);
+  }, [ready, profileUnlocked, route]);
   useEffect(() => { if (!toast) return undefined; const timeout = window.setTimeout(() => setToast(""), 3600); return () => window.clearTimeout(timeout); }, [toast]);
-  useEffect(() => { document.title = `Kamiunity — ${NAV_ITEMS.find((item) => item.id === route)?.label || (route === "backup" ? "Backup & transfer" : "Deadlines")}`; }, [route]);
-  function navigate(next) { const target = ["today", "calendar"].includes(next) ? "deadlines" : next; window.location.hash = `/${target}`; setRoute(target); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  useEffect(() => { document.title = `Kamiunity — ${NAV_ITEMS.find((item) => item.id === route)?.label || ({ backup: "Backup & transfer", profile: "Profile" }[route] || "Deadlines")}`; }, [route]);
+  function navigate(next) {
+    const target = ["today", "calendar"].includes(next) ? "deadlines" : next;
+    if (!profileUnlocked && target !== "profile") {
+      window.location.hash = "/profile";
+      setRoute("profile");
+      setToast("Complete your profile to unlock the workspace.");
+      return;
+    }
+    window.location.hash = `/${target}`;
+    setRoute(target);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   async function installApp() { if (!installPrompt) return; await installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null); }
   async function syncProgramCatalog(inputUrl) {
     const result = await syncCatalogFromUrl(inputUrl);
@@ -857,11 +1305,12 @@ export function App() {
     return programId;
   }
   const common = { data, refresh, notify: setToast, openModal: setModal, navigate, addCatalogProgram, syncCatalog: syncProgramCatalog, importCatalog: importProgramCatalog, resetCatalog: resetProgramCatalog };
-  const pages = { deadlines: <DeadlinesPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, documents: <DocumentsPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} /> };
+  const pages = { deadlines: <DeadlinesPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, services: <ServicesPage {...common} />, profile: <ProfilePage {...common} locked={!profileUnlocked} />, documents: <DocumentsPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} /> };
+  const visibleRoute = profileUnlocked ? route : "profile";
   if (!ready) return <main className="loading-screen"><img className="loading-brand" src={kamiunityLogo} alt="kamiunity" /><strong>{loadError ? "Your workspace could not open" : "Opening your application workspace…"}</strong><span role={loadError ? "alert" : undefined}>{loadError || "Your records stay on this device."}</span>{loadError ? <button className="secondary-button soft-button" type="button" onClick={() => window.location.reload()}>Try again</button> : null}</main>;
   return (
     <div className="app-shell kamiunity">
-      <TopNavigation route={route} navigate={navigate} openModal={setModal} /><main className="app-main">{pages[route]}</main>
+      <TopNavigation route={visibleRoute} navigate={navigate} profile={data.profile} /><main className="app-main">{pages[visibleRoute]}</main>
       {["task", "add-task"].includes(modal?.type) ? <TaskForm key={`task-${modal.task?.id || "new"}`} {...common} task={modal.task} applicationId={modal.applicationId} close={() => setModal(null)} /> : null}
       {["program", "add-program"].includes(modal?.type) ? <ProgramForm key={`program-${modal.program?.id || "new"}`} {...common} program={modal.program} close={() => setModal(null)} /> : null}
       {["application", "add-application"].includes(modal?.type) ? <ApplicationForm key={`application-${modal.application?.id || modal.programId || "new"}`} {...common} application={modal.application} programId={modal.programId} focusSection={modal.focusSection} close={() => setModal(null)} /> : null}

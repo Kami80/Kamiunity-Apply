@@ -3,6 +3,8 @@ import { CATALOG_SOURCE_SETTING_KEY, DEFAULT_CATALOG_SOURCE, STARTER_CATALOG } f
 import { inferProgramCategory, normalizeIntake } from "./program-taxonomy.js";
 
 export const db = new Dexie("apply-2027");
+export const PROFILE_SETTING_KEY = "profile";
+export const PROFILE_LOOKUP_EMAIL_SETTING_KEY = "profile-lookup-email";
 
 db.version(1).stores({
   programs: "++id,name,country,deadline",
@@ -86,14 +88,16 @@ export async function seedDatabase() {
 }
 
 export async function readAllData() {
-  const [programs, applications, tasks, documents, catalogPrograms, catalogSource] = await Promise.all([
+  const [programs, applications, tasks, documents, catalogPrograms, catalogSource, profile, profileLookupEmail] = await Promise.all([
     db.programs.toArray(),
     db.applications.toArray(),
     db.tasks.toArray(),
     db.documents.toArray(),
     db.catalogPrograms.toArray(),
     db.settings.get(CATALOG_SOURCE_SETTING_KEY),
+    db.settings.get(PROFILE_SETTING_KEY),
+    db.settings.get(PROFILE_LOOKUP_EMAIL_SETTING_KEY),
   ]);
 
-  return { programs, applications, tasks, documents, catalogPrograms, catalogSource: catalogSource?.value || { ...DEFAULT_CATALOG_SOURCE } };
+  return { programs, applications, tasks, documents, catalogPrograms, catalogSource: catalogSource?.value || { ...DEFAULT_CATALOG_SOURCE }, profile: profile?.value || null, profileLookupEmail: profileLookupEmail?.value || "" };
 }

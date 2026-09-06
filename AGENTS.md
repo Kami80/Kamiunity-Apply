@@ -12,7 +12,7 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 - Build a completely free, static, local-first PWA suitable for GitHub Pages. Do not add paid APIs, accounts, analytics, or a hosted backend.
 - Use `design/kamiunity/application-dossier.png` as the current Kamiunity visual source. The earlier deadline-first Today mock is retained as historical context.
-- Use restrained neumorphism with soft edges: warm paper surfaces, coral primary actions, high-contrast text, visible focus states, and shadows that are never the only state indicator.
+- Use restrained neumorphism with soft edges: warm paper surfaces, turquoise primary actions, high-contrast text, visible focus states, and shadows that are never the only state indicator.
 - Preserve spreadsheet-friendly workflows while prioritizing the student's next actions, deadlines, applications, programs, documents, calendar, and local backup.
 - Make the workflow editable and connected: programs need their own URL, admissions details, and professor contacts; applications can start from saved programs; documents can link to multiple programs and applications from either side. Preserve these richer details in local backups and spreadsheet exports.
 - Use the user's shared Google Sheet as the default read-only program catalogue feed, with the starter catalogue retained as the offline fallback.
@@ -31,4 +31,5 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Use distinct navigation shells for desktop and mobile: a full desktop header and a five-item mobile bottom bar.
 - The mobile bar is icon-only and ordered left-to-right as Applications, Programs, Add document, Deadlines, and Document vault; keep a raised central Add document action.
 - Keep Backup & transfer as an icon-only utility in the upper-right of the mobile shell, and keep the primary date workspace focused on Deadlines.
-- Use the attached palette as the visual source for the shell: peach `#E9B9AA`, red `#D94841`, blue `#7892B5`, light teal `#8CB9C0`, sage `#91B5A9`, and amber `#EDCA7F`, with warm retro-vibrant accents, liquid-glass surfaces, and high-contrast text.
+- Keep the application workspace locked until a matched Google Form profile is saved locally; Profile remains the setup route and unlocks the other pages after the first successful sync.
+- Use the active palette throughout the shell and all routes: yellow `#F4BF45`, mint `#A9DDD4`, pink `#F7B8C7`, and turquoise `#55C8BD`, with retro-vibrant accents, liquid-glass surfaces, and high-contrast dark text. Use darker derived tones only where the raw colors would reduce readability.
