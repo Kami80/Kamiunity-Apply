@@ -23,8 +23,10 @@ import {
   HardDrive,
   Kanban,
   MagnifyingGlass,
+  MoonStars,
   Plus,
   Sparkle,
+  Sun,
   Table,
   Trash,
   UploadSimple,
@@ -75,6 +77,18 @@ function currentRoute() {
 function isStandalonePwa() {
   if (typeof window === "undefined") return false;
   return Boolean(window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true);
+}
+
+const THEME_STORAGE_KEY = "kamiunity-theme";
+
+function readThemePreference() {
+  if (typeof window === "undefined") return "light";
+  try {
+    const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return saved === "dark" || saved === "light" ? saved : "light";
+  } catch {
+    return "light";
+  }
 }
 
 const SHARED_CATALOG_SHEET_ID = "1vu_kdUPWucy6F7lUvieuTA5MHct18aj-eha8FYTDK_s";
@@ -173,7 +187,7 @@ function comparePrograms(first, second, sort) {
   return 0;
 }
 
-function TopNavigation({ route, navigate, profile }) {
+function TopNavigation({ route, navigate, profile, installed = false, installPrompt, installApp, theme, toggleTheme }) {
   const navigateFromMobile = (nextRoute) => navigate(nextRoute);
   const workspaceLocked = !hasCompletedProfile(profile);
   const profileName = profile?.fullName?.trim() || "Your profile";
@@ -206,10 +220,12 @@ function TopNavigation({ route, navigate, profile }) {
             </button>
           ))}
         </nav>
-        <div className="brand-utilities"><span><CheckCircle size={19} />Saved on this device</span><button className={`backup-nav-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigate("backup")} aria-label="Backup and transfer" title={workspaceLocked ? "Complete your profile first" : "Backup & transfer"} disabled={workspaceLocked}><Archive size={21} /><span>Backup</span></button></div>
+        <div className="brand-utilities"><span><CheckCircle size={19} />Saved on this device</span><button className={`theme-toggle-button ${theme === "dark" ? "active" : ""}`} type="button" onClick={toggleTheme} aria-pressed={theme === "dark"} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>{theme === "dark" ? <Sun size={21} weight="duotone" /> : <MoonStars size={21} weight="duotone" />}<span>{theme === "dark" ? "Light" : "Dark"}</span></button>{!installed ? <button className="install-nav-button" type="button" onClick={installApp} aria-label="Install Kamiunity" title={installPrompt ? "Install Kamiunity" : "Use the browser menu to install Kamiunity"}><DownloadSimple size={21} /><span>Install</span></button> : null}<button className={`backup-nav-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigate("backup")} aria-label="Backup and transfer" title={workspaceLocked ? "Complete your profile first" : "Backup & transfer"} disabled={workspaceLocked}><Archive size={21} /><span>Backup</span></button></div>
       </header>
       <nav className="mobile-navigation" aria-label="Mobile navigation">
         <button className={`mobile-profile-button ${route === "profile" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("profile")} aria-current={route === "profile" ? "page" : undefined} aria-label={`Open profile for ${profileName}`} title="Profile"><span className="profile-avatar" aria-hidden="true">{profileInitials}</span><span className="mobile-profile-name">{profileName}</span></button>
+        {!installed ? <button className="mobile-install-button" type="button" onClick={installApp} aria-label="Install Kamiunity" title={installPrompt ? "Install Kamiunity" : "Use the browser menu to install Kamiunity"}><DownloadSimple size={21} /><span className="visually-hidden">Install Kamiunity</span></button> : null}
+        <button className={`mobile-theme-button ${theme === "dark" ? "active" : ""} ${!installed ? "has-install" : ""}`} type="button" onClick={toggleTheme} aria-pressed={theme === "dark"} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>{theme === "dark" ? <Sun size={21} weight="duotone" /> : <MoonStars size={21} weight="duotone" />}<span className="visually-hidden">{theme === "dark" ? "Light mode" : "Dark mode"}</span></button>
         <button className={`mobile-backup-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("backup")} aria-label="Backup and transfer" title={workspaceLocked ? "Complete your profile first" : "Backup & transfer"} disabled={workspaceLocked}><Archive size={21} weight={route === "backup" ? "duotone" : "regular"} /><span className="visually-hidden">Backup and transfer</span></button>
         <div className="mobile-nav-bar">
           <button className={`mobile-nav-item ${route === "applications" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("applications")} aria-current={route === "applications" ? "page" : undefined} aria-label="Applications" title={workspaceLocked ? "Complete your profile first" : "Applications"} disabled={workspaceLocked}><span className="mobile-nav-icon"><FolderSimple size={23} weight={route === "applications" ? "duotone" : "regular"} /></span><span className="visually-hidden">Applications</span></button>
@@ -1164,6 +1180,7 @@ export function App() {
   const [toast, setToast] = useState("");
   const [installPrompt, setInstallPrompt] = useState(null);
   const [appInstalled, setAppInstalled] = useState(isStandalonePwa);
+  const [theme, setTheme] = useState(readThemePreference);
   async function refresh() { setData(await readAllData()); }
   async function ensurePolimiCatalog(source) {
     const current = await db.catalogPrograms.toArray();
@@ -1219,6 +1236,12 @@ export function App() {
     setModal(null);
   }, [ready, profileUnlocked, route]);
   useEffect(() => { if (!toast) return undefined; const timeout = window.setTimeout(() => setToast(""), 3600); return () => window.clearTimeout(timeout); }, [toast]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#191821" : "#55C8BD");
+    try { window.localStorage.setItem(THEME_STORAGE_KEY, theme); } catch { /* Theme preference is optional on restricted browsers. */ }
+  }, [theme]);
   useEffect(() => { document.title = `Kamiunity — ${NAV_ITEMS.find((item) => item.id === route)?.label || ({ backup: "Backup & transfer", profile: "Profile" }[route] || "Deadlines")}`; }, [route]);
   function navigate(next) {
     const target = ["today", "calendar"].includes(next) ? "deadlines" : next;
@@ -1231,6 +1254,9 @@ export function App() {
     window.location.hash = `/${target}`;
     setRoute(target);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function toggleTheme() {
+    setTheme((value) => value === "dark" ? "light" : "dark");
   }
   async function installApp() {
     if (appInstalled) return;
@@ -1275,7 +1301,7 @@ export function App() {
   if (!ready) return <main className="loading-screen"><img className="loading-brand" src={kamiunityLogo} alt="kamiunity" /><strong>{loadError ? "Your workspace could not open" : "Opening your application workspace…"}</strong><span role={loadError ? "alert" : undefined}>{loadError || "Your records stay on this device."}</span>{loadError ? <button className="secondary-button soft-button" type="button" onClick={() => window.location.reload()}>Try again</button> : null}</main>;
   return (
     <div className="app-shell kamiunity">
-      <TopNavigation route={visibleRoute} navigate={navigate} profile={data.profile} /><main className="app-main">{pages[visibleRoute]}</main>
+      <TopNavigation route={visibleRoute} navigate={navigate} profile={data.profile} installed={appInstalled} installPrompt={installPrompt} installApp={installApp} theme={theme} toggleTheme={toggleTheme} /><main className="app-main">{pages[visibleRoute]}</main>
       {["task", "add-task"].includes(modal?.type) ? <TaskForm key={`task-${modal.task?.id || "new"}`} {...common} task={modal.task} applicationId={modal.applicationId} close={() => setModal(null)} /> : null}
       {["program", "add-program"].includes(modal?.type) ? <ProgramForm key={`program-${modal.program?.id || "new"}`} {...common} program={modal.program} close={() => setModal(null)} /> : null}
       {["application", "add-application"].includes(modal?.type) ? <ApplicationForm key={`application-${modal.application?.id || modal.programId || "new"}`} {...common} application={modal.application} programId={modal.programId} focusSection={modal.focusSection} close={() => setModal(null)} /> : null}

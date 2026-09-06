@@ -3473,3 +3473,681 @@ body,
     justify-content: center;
   }
 }
+
+/* Keep the PWA install action beside Backup until this device has installed it. */
+.install-nav-button {
+  display: inline-flex;
+  min-width: 42px;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(244, 191, 69, 0.55);
+  border-radius: 10px;
+  padding: 0 11px;
+  background: rgba(244, 191, 69, 0.3);
+  color: #76530a;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: var(--shadow-soft);
+}
+
+.install-nav-button:hover {
+  border-color: rgba(247, 184, 199, 0.75);
+  background: rgba(247, 184, 199, 0.62);
+  color: #7f3853;
+}
+
+.install-nav-button:active,
+.mobile-install-button:active {
+  transform: translateY(1px);
+}
+
+.mobile-install-button {
+  display: none;
+}
+
+@media (max-width: 1380px) and (min-width: 821px) {
+  .install-nav-button {
+    width: 42px;
+    padding-inline: 0;
+  }
+
+  .install-nav-button span {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  /* The application workspace bypasses .page, so reserve the same clearance
+     as the fixed profile, install, and backup controls. */
+  .kamiunity .application-workspace {
+    padding-top: 82px;
+  }
+
+  .kamiunity .mobile-profile-button {
+    max-width: calc(100% - 130px);
+  }
+
+  .kamiunity .mobile-install-button {
+    position: fixed;
+    top: 14px;
+    right: 68px;
+    z-index: 36;
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border: 1px solid rgba(244, 191, 69, 0.62);
+    border-radius: 14px;
+    background: rgba(244, 191, 69, 0.42);
+    color: #76530a;
+    cursor: pointer;
+    box-shadow: 0 14px 32px rgba(89, 71, 37, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(20px) saturate(155%);
+    backdrop-filter: blur(20px) saturate(155%);
+    pointer-events: auto;
+  }
+
+  .kamiunity .mobile-install-button:hover {
+    border-color: rgba(247, 184, 199, 0.8);
+    background: rgba(247, 184, 199, 0.64);
+    color: #7f3853;
+    transform: translateY(-1px);
+  }
+
+  .kamiunity .mobile-install-button:focus-visible {
+    outline: 0;
+    box-shadow: var(--focus);
+  }
+}
+
+@media (max-width: 560px) {
+  .kamiunity .mobile-profile-button {
+    max-width: calc(100% - 122px);
+  }
+
+  .kamiunity .mobile-install-button {
+    right: 64px;
+  }
+}
+
+/* Theme controls */
+.theme-toggle-button,
+.mobile-theme-button {
+  display: inline-flex;
+  min-width: 42px;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(85, 200, 189, 0.32);
+  border-radius: 10px;
+  padding: 0 11px;
+  background: rgba(169, 221, 212, 0.22);
+  color: #176e68;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: var(--shadow-soft);
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.theme-toggle-button:hover,
+.theme-toggle-button.active,
+.mobile-theme-button:hover,
+.mobile-theme-button.active {
+  border-color: rgba(247, 184, 199, 0.7);
+  background: rgba(247, 184, 199, 0.5);
+  color: #963c5b;
+  transform: translateY(-1px);
+}
+
+.theme-toggle-button:active,
+.mobile-theme-button:active {
+  transform: translateY(1px);
+}
+
+.theme-toggle-button:focus-visible,
+.mobile-theme-button:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus);
+}
+
+.mobile-theme-button {
+  display: none;
+}
+
+@media (max-width: 1380px) and (min-width: 821px) {
+  .theme-toggle-button {
+    width: 42px;
+    padding-inline: 0;
+  }
+
+  .theme-toggle-button span {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .kamiunity .mobile-profile-button {
+    max-width: calc(100% - 178px);
+  }
+
+  .kamiunity .mobile-theme-button {
+    position: fixed;
+    top: 14px;
+    right: 68px;
+    z-index: 36;
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 14px;
+    pointer-events: auto;
+  }
+
+  .kamiunity .mobile-theme-button.has-install {
+    right: 120px;
+  }
+}
+
+@media (max-width: 560px) {
+  .kamiunity .mobile-profile-button {
+    max-width: calc(100% - 170px);
+  }
+
+  .kamiunity .mobile-theme-button {
+    right: 64px;
+  }
+
+  .kamiunity .mobile-theme-button.has-install {
+    right: 116px;
+  }
+}
+
+/* Dark mode: keep the four-color Kamiunity identity while shifting the
+   surfaces, type, and shadows to a calm evening workspace. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #191821;
+  --surface: rgba(35, 36, 49, 0.86);
+  --surface-raised: #272938;
+  --ink: #fff3e7;
+  --muted: #c0c3cd;
+  --faint: #9297a7;
+  --line: rgba(255, 255, 255, 0.15);
+  --teal: #63ded1;
+  --teal-dark: #8ce9df;
+  --teal-soft: rgba(85, 200, 189, 0.2);
+  --coral: #ff9fba;
+  --coral-soft: rgba(247, 184, 199, 0.2);
+  --green: #7ddfd0;
+  --shadow-soft: 8px 10px 22px rgba(0, 0, 0, 0.38), -7px -8px 18px rgba(255, 255, 255, 0.035);
+  --shadow-raised: 13px 16px 34px rgba(0, 0, 0, 0.5), -11px -12px 28px rgba(255, 255, 255, 0.04);
+  --shadow-inset: inset 5px 6px 13px rgba(0, 0, 0, 0.32), inset -5px -6px 13px rgba(255, 255, 255, 0.035);
+  --focus: 0 0 0 3px rgba(85, 200, 189, 0.68), 0 0 0 6px rgba(244, 191, 69, 0.32);
+}
+
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] .kamiunity {
+  background:
+    radial-gradient(circle at 4% 0%, rgba(247, 184, 199, 0.16), transparent 29rem),
+    radial-gradient(circle at 96% 10%, rgba(244, 191, 69, 0.13), transparent 26rem),
+    radial-gradient(circle at 48% 100%, rgba(169, 221, 212, 0.11), transparent 30rem),
+    var(--canvas);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .kamiunity {
+  background:
+    radial-gradient(circle at 4% 0%, rgba(247, 184, 199, 0.13), transparent 28rem),
+    radial-gradient(circle at 96% 10%, rgba(244, 191, 69, 0.1), transparent 25rem),
+    radial-gradient(circle at 48% 100%, rgba(169, 221, 212, 0.08), transparent 30rem),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 5px),
+    var(--canvas);
+}
+
+:root[data-theme="dark"] .loading-screen {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .kamiunity .brand img,
+:root[data-theme="dark"] .loading-screen .loading-brand {
+  filter: brightness(1.65) saturate(0.92);
+}
+
+:root[data-theme="dark"] .kamiunity .topbar,
+:root[data-theme="dark"] .kamiunity .desktop-navigation {
+  border-color: rgba(169, 221, 212, 0.2);
+  background: rgba(25, 26, 36, 0.88);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+}
+
+:root[data-theme="dark"] .kamiunity .topnav {
+  border-color: rgba(169, 221, 212, 0.22);
+  background: rgba(44, 46, 62, 0.86);
+  box-shadow: 10px 12px 28px rgba(0, 0, 0, 0.36), -8px -8px 22px rgba(255, 255, 255, 0.025);
+}
+
+:root[data-theme="dark"] .kamiunity .nav-item,
+:root[data-theme="dark"] .kamiunity .mobile-nav-item {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .kamiunity .nav-item.active {
+  background: rgba(247, 184, 199, 0.2);
+  color: #ffd9e3;
+  box-shadow: 7px 8px 17px rgba(0, 0, 0, 0.28), -5px -5px 14px rgba(255, 255, 255, 0.025);
+}
+
+:root[data-theme="dark"] .kamiunity .profile-nav-button,
+:root[data-theme="dark"] .kamiunity .mobile-profile-button,
+:root[data-theme="dark"] .kamiunity .backup-nav-button,
+:root[data-theme="dark"] .kamiunity .mobile-backup-button,
+:root[data-theme="dark"] .kamiunity .install-nav-button,
+:root[data-theme="dark"] .kamiunity .theme-toggle-button,
+:root[data-theme="dark"] .kamiunity .mobile-theme-button {
+  border-color: rgba(169, 221, 212, 0.28);
+  background: rgba(39, 41, 56, 0.9);
+  color: var(--teal-dark);
+}
+
+:root[data-theme="dark"] .kamiunity .profile-nav-button:hover,
+:root[data-theme="dark"] .kamiunity .profile-nav-button.active,
+:root[data-theme="dark"] .kamiunity .mobile-profile-button:hover,
+:root[data-theme="dark"] .kamiunity .mobile-profile-button.active,
+:root[data-theme="dark"] .kamiunity .backup-nav-button:hover,
+:root[data-theme="dark"] .kamiunity .backup-nav-button.active,
+:root[data-theme="dark"] .kamiunity .mobile-backup-button:hover,
+:root[data-theme="dark"] .kamiunity .mobile-backup-button.active,
+:root[data-theme="dark"] .kamiunity .install-nav-button:hover,
+:root[data-theme="dark"] .kamiunity .theme-toggle-button:hover,
+:root[data-theme="dark"] .kamiunity .theme-toggle-button.active,
+:root[data-theme="dark"] .kamiunity .mobile-theme-button:hover,
+:root[data-theme="dark"] .kamiunity .mobile-theme-button.active {
+  border-color: rgba(247, 184, 199, 0.55);
+  background: rgba(247, 184, 199, 0.22);
+  color: #ffb4c8;
+}
+
+:root[data-theme="dark"] .kamiunity .profile-avatar,
+:root[data-theme="dark"] .kamiunity .profile-large-avatar {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 5px 7px 14px rgba(0, 0, 0, 0.36), inset 0 2px 0 rgba(255, 255, 255, 0.2);
+  color: #17343a;
+}
+
+:root[data-theme="dark"] .kamiunity .profile-nav-copy strong,
+:root[data-theme="dark"] .kamiunity .mobile-profile-name {
+  color: #8ce9df;
+}
+
+:root[data-theme="dark"] .kamiunity .brand-utilities > span {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .kamiunity .soft-panel,
+:root[data-theme="dark"] .kamiunity .workspace-panel,
+:root[data-theme="dark"] .kamiunity .calendar-panel,
+:root[data-theme="dark"] .kamiunity .document-list,
+:root[data-theme="dark"] .kamiunity .document-detail,
+:root[data-theme="dark"] .kamiunity .backup-card,
+:root[data-theme="dark"] .kamiunity .catalog-connection,
+:root[data-theme="dark"] .kamiunity .program-filters-panel,
+:root[data-theme="dark"] .kamiunity .program-shortlist-desktop,
+:root[data-theme="dark"] .kamiunity .program-shortlist-mobile,
+:root[data-theme="dark"] .kamiunity .deadline-board,
+:root[data-theme="dark"] .kamiunity .combined-schedule,
+:root[data-theme="dark"] .kamiunity .modal,
+:root[data-theme="dark"] .kamiunity .services-contact-card,
+:root[data-theme="dark"] .kamiunity .template-preview {
+  border-color: rgba(169, 221, 212, 0.2);
+  background: rgba(35, 36, 49, 0.86);
+  box-shadow: var(--shadow-raised);
+}
+
+:root[data-theme="dark"] .kamiunity .soft-inset,
+:root[data-theme="dark"] .kamiunity .search-field,
+:root[data-theme="dark"] .kamiunity .data-table select,
+:root[data-theme="dark"] .kamiunity .kanban-card select,
+:root[data-theme="dark"] .kamiunity .field-label input,
+:root[data-theme="dark"] .kamiunity .form-stack input,
+:root[data-theme="dark"] .kamiunity .form-stack select,
+:root[data-theme="dark"] .kamiunity .form-stack textarea,
+:root[data-theme="dark"] .kamiunity .toolbar-filter select,
+:root[data-theme="dark"] .kamiunity .advanced-filter select,
+:root[data-theme="dark"] .kamiunity .program-sort select,
+:root[data-theme="dark"] .kamiunity .profile-email-field input {
+  border-color: rgba(85, 200, 189, 0.28);
+  background: rgba(85, 200, 189, 0.11);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .kamiunity input::placeholder,
+:root[data-theme="dark"] .kamiunity textarea::placeholder,
+:root[data-theme="dark"] .kamiunity .search-field input::placeholder {
+  color: #9da4af;
+}
+
+:root[data-theme="dark"] .kamiunity select option {
+  background: #272938;
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .kamiunity .primary-button {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: var(--teal);
+  color: #102f32;
+  box-shadow: 5px 8px 15px rgba(0, 0, 0, 0.38), -3px -3px 8px rgba(255, 255, 255, 0.035);
+}
+
+:root[data-theme="dark"] .kamiunity .primary-button:hover {
+  background: var(--yellow);
+  color: #382908;
+  box-shadow: 7px 10px 20px rgba(0, 0, 0, 0.44), -4px -4px 10px rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="dark"] .kamiunity .secondary-button,
+:root[data-theme="dark"] .kamiunity .danger-button {
+  border-color: rgba(169, 221, 212, 0.22);
+  background: rgba(39, 41, 56, 0.9);
+  color: var(--teal-dark);
+}
+
+:root[data-theme="dark"] .kamiunity .danger-button,
+:root[data-theme="dark"] .kamiunity .danger-text-action,
+:root[data-theme="dark"] .kamiunity .expired-label {
+  color: #ff9fba;
+}
+
+:root[data-theme="dark"] .kamiunity .soft-button:hover,
+:root[data-theme="dark"] .kamiunity .icon-button:hover,
+:root[data-theme="dark"] .kamiunity .secondary-button:hover {
+  background: rgba(85, 200, 189, 0.18);
+}
+
+:root[data-theme="dark"] .kamiunity .page-header h1,
+:root[data-theme="dark"] .kamiunity .home-hero-copy h1,
+:root[data-theme="dark"] .kamiunity .deadline-hero-copy h2,
+:root[data-theme="dark"] .kamiunity .deadline-board-heading h2,
+:root[data-theme="dark"] .kamiunity .services-hero-copy h2,
+:root[data-theme="dark"] .kamiunity .profile-hero h2,
+:root[data-theme="dark"] .kamiunity .home-overview-card h2,
+:root[data-theme="dark"] .kamiunity .dossier-header h2,
+:root[data-theme="dark"] .kamiunity .dossier-section-heading h3,
+:root[data-theme="dark"] .kamiunity .service-launch-heading h2 {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .kamiunity .page-header p,
+:root[data-theme="dark"] .kamiunity .home-hero-copy > p,
+:root[data-theme="dark"] .kamiunity .home-overview-card > p,
+:root[data-theme="dark"] .kamiunity .home-step p,
+:root[data-theme="dark"] .kamiunity .deadline-board-heading p,
+:root[data-theme="dark"] .kamiunity .service-launch-heading p,
+:root[data-theme="dark"] .kamiunity .service-launch-note,
+:root[data-theme="dark"] .kamiunity .profile-connection-note p,
+:root[data-theme="dark"] .kamiunity .profile-form-hint,
+:root[data-theme="dark"] .kamiunity .install-help {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .kamiunity .home-hero,
+:root[data-theme="dark"] .kamiunity .services-hero,
+:root[data-theme="dark"] .kamiunity .profile-hero {
+  background: linear-gradient(128deg, rgba(42, 43, 57, 0.94) 0%, rgba(85, 200, 189, 0.14) 48%, rgba(244, 191, 69, 0.13) 100%);
+}
+
+:root[data-theme="dark"] .kamiunity .home-hero::before,
+:root[data-theme="dark"] .kamiunity .services-hero::before {
+  background: rgba(247, 184, 199, 0.18);
+}
+
+:root[data-theme="dark"] .kamiunity .home-hero-image-frame,
+:root[data-theme="dark"] .kamiunity .first-use-art-wrap {
+  background: rgba(85, 200, 189, 0.14);
+}
+
+:root[data-theme="dark"] .kamiunity .home-hero-badge,
+:root[data-theme="dark"] .kamiunity .feature-icon {
+  background: rgba(244, 191, 69, 0.2);
+  color: #ffe19a;
+}
+
+:root[data-theme="dark"] .kamiunity .home-hero-float {
+  background: rgba(85, 200, 189, 0.2);
+  color: #8ce9df;
+}
+
+:root[data-theme="dark"] .kamiunity .home-hero-float small,
+:root[data-theme="dark"] .kamiunity .home-overview-points,
+:root[data-theme="dark"] .kamiunity .home-step-number {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .kamiunity .home-card-icon,
+:root[data-theme="dark"] .kamiunity .services-contact-link-icon,
+:root[data-theme="dark"] .kamiunity .profile-card-icon-blue {
+  background: rgba(85, 200, 189, 0.2);
+  color: #8ce9df;
+}
+
+:root[data-theme="dark"] .kamiunity .home-start-card {
+  background: rgba(244, 191, 69, 0.14);
+}
+
+:root[data-theme="dark"] .kamiunity .application-index {
+  background: rgba(31, 54, 57, 0.55);
+}
+
+:root[data-theme="dark"] .kamiunity .index-heading p,
+:root[data-theme="dark"] .kamiunity .index-search,
+:root[data-theme="dark"] .kamiunity .dossier-breadcrumb > span,
+:root[data-theme="dark"] .kamiunity .index-deadline,
+:root[data-theme="dark"] .kamiunity .assigned-file-name,
+:root[data-theme="dark"] .kamiunity .contact-email,
+:root[data-theme="dark"] .kamiunity .dossier-research-note p,
+:root[data-theme="dark"] .kamiunity .catalog-result-main p,
+:root[data-theme="dark"] .kamiunity .catalog-verification {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .kamiunity .application-index-item.selected {
+  background: rgba(247, 184, 199, 0.2);
+}
+
+:root[data-theme="dark"] .kamiunity .application-dossier {
+  background: linear-gradient(145deg, rgba(31, 32, 44, 0.9), rgba(244, 191, 69, 0.07) 58%, rgba(247, 184, 199, 0.08));
+}
+
+:root[data-theme="dark"] .kamiunity .application-stage-pill.preparing,
+:root[data-theme="dark"] .kamiunity .readiness-badge.ready {
+  background: rgba(169, 221, 212, 0.2);
+  color: #9cf0e5;
+}
+
+:root[data-theme="dark"] .kamiunity .readiness-badge {
+  background: rgba(244, 191, 69, 0.18);
+  color: #ffe19a;
+}
+
+:root[data-theme="dark"] .kamiunity .readiness-badge.needed,
+:root[data-theme="dark"] .kamiunity .priority-label.high,
+:root[data-theme="dark"] .kamiunity .due-chip.urgent {
+  background: rgba(247, 184, 199, 0.2);
+  color: #ffb4c8;
+}
+
+:root[data-theme="dark"] .kamiunity .readiness-badge.example,
+:root[data-theme="dark"] .kamiunity .priority-label.low,
+:root[data-theme="dark"] .kamiunity .due-chip.done,
+:root[data-theme="dark"] .kamiunity .due-chip {
+  background: rgba(85, 200, 189, 0.16);
+  color: #8ce9df;
+}
+
+:root[data-theme="dark"] .kamiunity .application-file-row {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+:root[data-theme="dark"] .kamiunity .application-file-row + .application-file-row,
+:root[data-theme="dark"] .kamiunity .data-table td,
+:root[data-theme="dark"] .kamiunity .profile-details-list > div {
+  border-color: var(--line);
+}
+
+:root[data-theme="dark"] .kamiunity .contact-avatar {
+  background: rgba(169, 221, 212, 0.2);
+  color: #b9eee6;
+}
+
+:root[data-theme="dark"] .kamiunity .dossier-empty {
+  border-color: rgba(169, 221, 212, 0.34);
+}
+
+:root[data-theme="dark"] .kamiunity .stage-node {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: #232431;
+  outline-color: #232431;
+}
+
+:root[data-theme="dark"] .kamiunity .data-table th {
+  background: rgba(244, 191, 69, 0.16);
+  color: #ffe19a;
+}
+
+:root[data-theme="dark"] .kamiunity .catalog-result:hover,
+:root[data-theme="dark"] .kamiunity .data-table tbody tr:hover,
+:root[data-theme="dark"] .kamiunity .agenda-row:hover,
+:root[data-theme="dark"] .kamiunity .document-row:hover,
+:root[data-theme="dark"] .kamiunity .document-row.selected {
+  background: rgba(247, 184, 199, 0.12);
+}
+
+:root[data-theme="dark"] .kamiunity .program-category-badge {
+  background: rgba(169, 221, 212, 0.22);
+  color: #9cf0e5 !important;
+}
+
+:root[data-theme="dark"] .kamiunity .pagination-pages button.active,
+:root[data-theme="dark"] .kamiunity .filter-toggle span,
+:root[data-theme="dark"] .kamiunity .storage-meter span,
+:root[data-theme="dark"] .kamiunity progress::-webkit-progress-value,
+:root[data-theme="dark"] .kamiunity progress::-moz-progress-bar {
+  background: var(--teal);
+  color: #102f32;
+}
+
+:root[data-theme="dark"] .kamiunity progress,
+:root[data-theme="dark"] .kamiunity progress::-webkit-progress-bar,
+:root[data-theme="dark"] .kamiunity .storage-meter,
+:root[data-theme="dark"] .kamiunity .kanban-column {
+  background: rgba(85, 200, 189, 0.14);
+}
+
+:root[data-theme="dark"] .kamiunity .mobile-nav-bar,
+:root[data-theme="dark"] .kamiunity .mobile-backup-button,
+:root[data-theme="dark"] .kamiunity .mobile-theme-button {
+  border-color: rgba(169, 221, 212, 0.22);
+  background: rgba(35, 36, 49, 0.88);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="dark"] .kamiunity .mobile-nav-item.active:not(.mobile-nav-services) .mobile-nav-icon {
+  background: rgba(85, 200, 189, 0.18);
+  color: #8ce9df;
+  box-shadow: 5px 6px 12px rgba(0, 0, 0, 0.3), -4px -4px 9px rgba(255, 255, 255, 0.025);
+}
+
+:root[data-theme="dark"] .kamiunity .mobile-nav-services .mobile-nav-icon {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: #176e68;
+  box-shadow: 0 14px 23px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(85, 200, 189, 0.18);
+}
+
+:root[data-theme="dark"] .kamiunity .services-community {
+  background: linear-gradient(120deg, rgba(169, 221, 212, 0.14), rgba(244, 191, 69, 0.12));
+}
+
+:root[data-theme="dark"] .kamiunity .template-ready,
+:root[data-theme="dark"] .kamiunity .profile-connected-summary,
+:root[data-theme="dark"] .kamiunity .service-launch-ready {
+  border-color: rgba(85, 200, 189, 0.3);
+  background: rgba(85, 200, 189, 0.16);
+  color: #9cf0e5;
+}
+
+:root[data-theme="dark"] .kamiunity .profile-sync-badge {
+  border-color: rgba(247, 184, 199, 0.4);
+  background: rgba(247, 184, 199, 0.16);
+  color: #ffb4c8;
+}
+
+:root[data-theme="dark"] .kamiunity .profile-card-icon-peach,
+:root[data-theme="dark"] .kamiunity .services-contact-stamp {
+  background: rgba(247, 184, 199, 0.2);
+  color: #ffb4c8;
+}
+
+:root[data-theme="dark"] .kamiunity .profile-connected-icon,
+:root[data-theme="dark"] .kamiunity .profile-access-gate-icon {
+  background: rgba(39, 41, 56, 0.9);
+  color: #9cf0e5;
+}
+
+:root[data-theme="dark"] .kamiunity .profile-access-gate {
+  border-color: rgba(244, 191, 69, 0.42);
+  background: linear-gradient(105deg, rgba(244, 191, 69, 0.14), rgba(247, 184, 199, 0.14));
+}
+
+:root[data-theme="dark"] .kamiunity .profile-access-gate p {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .kamiunity .modal-backdrop {
+  background: rgba(5, 6, 12, 0.72);
+}
+
+:root[data-theme="dark"] .kamiunity .form-error,
+:root[data-theme="dark"] .kamiunity .profile-notice-error {
+  border-color: rgba(247, 184, 199, 0.42);
+  background: rgba(247, 184, 199, 0.16);
+  color: #ffb4c8;
+}
+
+:root[data-theme="dark"] .kamiunity .form-notice,
+:root[data-theme="dark"] .kamiunity .source-summary {
+  border-color: rgba(244, 191, 69, 0.42);
+  background: rgba(244, 191, 69, 0.14);
+  color: #ffe19a;
+}
+
+:root[data-theme="dark"] .kamiunity .picker-option,
+:root[data-theme="dark"] .kamiunity .service-launch-selection,
+:root[data-theme="dark"] .kamiunity .service-launch-actions,
+:root[data-theme="dark"] .kamiunity .service-launch-service {
+  border-color: rgba(169, 221, 212, 0.18);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+:root[data-theme="dark"] .kamiunity .picker-option.is-selected {
+  border-color: rgba(85, 200, 189, 0.5);
+  background: rgba(85, 200, 189, 0.16);
+}
+
+:root[data-theme="dark"] .kamiunity .toast {
+  border-color: rgba(85, 200, 189, 0.38);
+  background: rgba(85, 200, 189, 0.22);
+  color: #a9f1e7;
+}
+
+:root[data-theme="dark"] .kamiunity .empty-state svg {
+  color: var(--teal);
+}
+
+:root[data-theme="dark"] * {
+  scrollbar-color: var(--teal) rgba(85, 200, 189, 0.14);
+}
