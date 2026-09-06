@@ -72,6 +72,11 @@ function currentRoute() {
   return ROUTES.includes(value) ? value : "applications";
 }
 
+function isStandalonePwa() {
+  if (typeof window === "undefined") return false;
+  return Boolean(window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true);
+}
+
 const SHARED_CATALOG_SHEET_ID = "1vu_kdUPWucy6F7lUvieuTA5MHct18aj-eha8FYTDK_s";
 const isSharedCatalogUrl = (input) => String(input || "").includes(`/spreadsheets/d/${SHARED_CATALOG_SHEET_ID}/`);
 
@@ -923,7 +928,7 @@ function hasCompletedProfile(profile) {
   return Boolean(profile?.email && profile?.fullName?.trim());
 }
 
-function ProfilePage({ data, refresh, notify, locked = false }) {
+function ProfilePage({ data, refresh, notify, locked = false, installPrompt, installApp, installed = false }) {
   const savedEmail = data.profile?.email || data.profileLookupEmail || "";
   const [email, setEmail] = useState(savedEmail);
   const [showEmailEditor, setShowEmailEditor] = useState(!savedEmail);
@@ -1042,7 +1047,7 @@ function ProfilePage({ data, refresh, notify, locked = false }) {
         title={profileReady ? profile.fullName : "Unlock your workspace"}
         description={locked ? "Create your profile through the Google Form, then sync it once to unlock programs, applications, deadlines, documents, and services." : profileReady ? "Your connected profile is restored from this browser and can be refreshed whenever your details change." : "Keep your academic background in one place and refresh it from your Google Form whenever something changes."}
         localMessage={profileReady && profile.syncedAt ? `Synced ${formatCatalogTimestamp(profile.syncedAt)}` : "Stored only on this device"}
-        action={<button className="primary-button" type="button" onClick={openProfileForm}><ArrowSquareOut size={19} />Open Google Form</button>}
+        action={<div className="profile-header-actions"><button className="primary-button" type="button" onClick={openProfileForm}><ArrowSquareOut size={19} />Open Google Form</button>{installed ? <span className="pwa-status-badge"><CheckCircle size={18} />Installed</span> : installPrompt ? <button className="secondary-button soft-button" type="button" onClick={installApp}><DownloadSimple size={19} />Install app</button> : null}</div>}
       />
 
       {locked ? <div className="profile-access-gate soft-inset" role="status"><span className="profile-access-gate-icon"><WarningCircle size={22} weight="duotone" /></span><div><strong>Complete your profile to unlock Kamiunity.</strong><p>Submit the form, return here, and sync the response. Your matched profile will unlock the rest of the app on this browser.</p></div></div> : null}
@@ -1079,7 +1084,7 @@ function ProfilePage({ data, refresh, notify, locked = false }) {
   );
 }
 
-function BackupPage({ data, refresh, notify, installPrompt, installApp }) {
+function BackupPage({ data, refresh, notify, installPrompt, installApp, installed = false }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [storage, setStorage] = useState({ used: 0, quota: 0, persistent: false });
@@ -1141,8 +1146,9 @@ function BackupPage({ data, refresh, notify, installPrompt, installApp }) {
           <button className="secondary-button soft-button" type="button" onClick={requestPersistence} disabled={storage.persistent}><Database size={20} />{storage.persistent ? "Storage protected" : "Protect local storage"}</button>
         </section>
         <section className="backup-card install-card soft-panel">
-          <span className="feature-icon soft-button"><DownloadSimple size={28} weight="duotone" /></span><div><span className="section-kicker">Offline app</span><h2>Install Kamiunity</h2><p>Keep your application workspace close, even without an internet connection.</p></div>
-          <button className="secondary-button soft-button" type="button" onClick={installApp} disabled={!installPrompt}><DownloadSimple size={20} />{installPrompt ? "Install app" : "Already installed or unavailable"}</button>
+          <span className="feature-icon soft-button"><DownloadSimple size={28} weight="duotone" /></span><div><span className="section-kicker">Offline app</span><h2>{installed ? "Kamiunity is installed" : "Install Kamiunity"}</h2><p>{installed ? "Open your application workspace from your device like a normal app." : "Keep your application workspace close, even without an internet connection."}</p></div>
+          <button className="secondary-button soft-button" type="button" onClick={installApp} disabled={installed || !installPrompt}><DownloadSimple size={20} />{installed ? "Installed on this device" : installPrompt ? "Install app" : "Use the browser install menu"}</button>
+          {!installed && !installPrompt ? <small className="install-help">If the button is unavailable, open your browser menu and choose Install app or Add to Home Screen.</small> : null}
         </section>
       </div>
     </div>
@@ -1157,6 +1163,7 @@ export function App() {
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
   const [installPrompt, setInstallPrompt] = useState(null);
+  const [appInstalled, setAppInstalled] = useState(isStandalonePwa);
   async function refresh() { setData(await readAllData()); }
   async function ensurePolimiCatalog(source) {
     const current = await db.catalogPrograms.toArray();
@@ -1199,8 +1206,9 @@ export function App() {
     if (!window.location.hash) window.location.hash = "/applications";
     const handleHash = () => setRoute(currentRoute());
     const handleInstall = (event) => { event.preventDefault(); setInstallPrompt(event); };
-    window.addEventListener("hashchange", handleHash); window.addEventListener("beforeinstallprompt", handleInstall);
-    return () => { window.removeEventListener("hashchange", handleHash); window.removeEventListener("beforeinstallprompt", handleInstall); };
+    const handleInstalled = () => { setInstallPrompt(null); setAppInstalled(true); };
+    window.addEventListener("hashchange", handleHash); window.addEventListener("beforeinstallprompt", handleInstall); window.addEventListener("appinstalled", handleInstalled);
+    return () => { window.removeEventListener("hashchange", handleHash); window.removeEventListener("beforeinstallprompt", handleInstall); window.removeEventListener("appinstalled", handleInstalled); };
   }, []);
   const profileUnlocked = hasCompletedProfile(data.profile);
   useEffect(() => {
@@ -1224,7 +1232,13 @@ export function App() {
     setRoute(target);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  async function installApp() { if (!installPrompt) return; await installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null); }
+  async function installApp() {
+    if (appInstalled) return;
+    if (!installPrompt) { setToast("Use your browser menu to install Kamiunity."); return; }
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  }
   async function syncProgramCatalog(inputUrl) {
     const result = await syncCatalogFromUrl(inputUrl);
     if (isSharedCatalogUrl(inputUrl)) await ensurePolimiCatalog(result.source);
@@ -1256,7 +1270,7 @@ export function App() {
     return programId;
   }
   const common = { data, refresh, notify: setToast, openModal: setModal, navigate, addCatalogProgram, syncCatalog: syncProgramCatalog, importCatalog: importProgramCatalog, resetCatalog: resetProgramCatalog };
-  const pages = { deadlines: <DeadlinesPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, services: <ServicesPage {...common} />, profile: <ProfilePage {...common} locked={!profileUnlocked} />, documents: <DocumentsPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} /> };
+  const pages = { deadlines: <DeadlinesPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, services: <ServicesPage {...common} />, profile: <ProfilePage {...common} locked={!profileUnlocked} installPrompt={installPrompt} installApp={installApp} installed={appInstalled} />, documents: <DocumentsPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} installed={appInstalled} /> };
   const visibleRoute = profileUnlocked ? route : "profile";
   if (!ready) return <main className="loading-screen"><img className="loading-brand" src={kamiunityLogo} alt="kamiunity" /><strong>{loadError ? "Your workspace could not open" : "Opening your application workspace…"}</strong><span role={loadError ? "alert" : undefined}>{loadError || "Your records stay on this device."}</span>{loadError ? <button className="secondary-button soft-button" type="button" onClick={() => window.location.reload()}>Try again</button> : null}</main>;
   return (

@@ -3432,3 +3432,44 @@ body,
     min-height: 61px;
   }
 }
+
+.profile-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.pwa-status-badge {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(85, 200, 189, 0.32);
+  border-radius: 13px;
+  padding: 0 13px;
+  background: rgba(169, 221, 212, 0.45);
+  color: #286d67;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.install-help {
+  display: block;
+  max-width: 400px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 560px) {
+  .profile-header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .profile-header-actions > * {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
