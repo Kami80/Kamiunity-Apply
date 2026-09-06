@@ -2,25 +2,25 @@
   color-scheme: light;
   font-family: "Manrope Variable", "Segoe UI", sans-serif;
   font-synthesis: none;
-  color: #304b50;
-  background: #f6f8f7;
-  --canvas: #f6f8f7;
-  --surface: #eef4f2;
-  --surface-raised: #ffffff;
-  --ink: #304b50;
-  --muted: #60777b;
-  --faint: #809094;
-  --teal: #3f7f87;
-  --teal-dark: #2f626b;
-  --teal-soft: #d9ecee;
+  color: #3d3040;
+  background: #fff7ec;
+  --canvas: #fff7ec;
+  --surface: rgba(255, 251, 244, 0.84);
+  --surface-raised: #fffdf8;
+  --ink: #3d3040;
+  --muted: #766876;
+  --faint: #a39293;
+  --teal: #d94841;
+  --teal-dark: #7f3948;
+  --teal-soft: #f5ded8;
   --coral: #d94841;
   --coral-soft: #f5d9d6;
-  --green: #568a7c;
-  --line: rgba(48, 75, 80, 0.15);
-  --shadow-raised: 9px 9px 20px rgba(173, 166, 157, 0.34), -9px -9px 20px rgba(255, 255, 255, 0.86);
-  --shadow-soft: 5px 5px 12px rgba(173, 166, 157, 0.27), -5px -5px 12px rgba(255, 255, 255, 0.78);
-  --shadow-inset: inset 5px 5px 11px rgba(176, 168, 159, 0.25), inset -5px -5px 11px rgba(255, 255, 255, 0.78);
-  --focus: 0 0 0 3px rgba(120, 146, 181, 0.42), 0 0 0 6px rgba(237, 202, 127, 0.24);
+  --green: #648d79;
+  --line: rgba(61, 48, 64, 0.16);
+  --shadow-raised: 10px 12px 24px rgba(111, 74, 75, 0.19), -10px -10px 23px rgba(255, 255, 255, 0.92);
+  --shadow-soft: 6px 7px 14px rgba(111, 74, 75, 0.16), -6px -6px 13px rgba(255, 255, 255, 0.84);
+  --shadow-inset: inset 5px 6px 12px rgba(111, 74, 75, 0.14), inset -5px -6px 12px rgba(255, 255, 255, 0.86);
+  --focus: 0 0 0 3px rgba(120, 146, 181, 0.46), 0 0 0 6px rgba(237, 202, 127, 0.3);
 }
 
 * {

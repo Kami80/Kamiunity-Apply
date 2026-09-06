@@ -6,7 +6,6 @@ import {
   CalendarBlank,
   CalendarCheck,
   CaretRight,
-  Check,
   CheckCircle,
   Clock,
   Database,
@@ -50,9 +49,9 @@ import {
   restoreBackup,
 } from "./backup.js";
 
-const ROUTES = ["today", "programs", "applications", "documents", "calendar", "backup"];
+const ROUTES = ["deadlines", "programs", "applications", "documents", "backup"];
 const NAV_ITEMS = [
-  { id: "today", label: "Today & deadlines", icon: CalendarCheck },
+  { id: "deadlines", label: "Deadlines", icon: CalendarCheck },
   { id: "applications", label: "My applications", icon: FolderSimple },
   { id: "programs", label: "Program shortlist", icon: GraduationCap },
   { id: "documents", label: "Document vault", icon: FileText },
@@ -60,7 +59,7 @@ const NAV_ITEMS = [
 
 function currentRoute() {
   const value = window.location.hash.replace(/^#\/?/, "").split("/")[0];
-  if (value === "calendar") return "today";
+  if (value === "today" || value === "calendar") return "deadlines";
   return ROUTES.includes(value) ? value : "applications";
 }
 
@@ -69,14 +68,6 @@ const isSharedCatalogUrl = (input) => String(input || "").includes(`/spreadsheet
 
 function parseDate(value) {
   return new Date(`${value}T12:00:00`);
-}
-
-function formatLongDate(value = new Date()) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(value);
 }
 
 function formatShortDate(value) {
@@ -113,7 +104,7 @@ function relativeDue(value) {
   if (!value) return "No deadline yet";
   const days = daysUntil(value);
   if (days < 0) return `${Math.abs(days)}d overdue`;
-  if (days === 0) return "Today";
+  if (days === 0) return "Due now";
   if (days === 1) return "Tomorrow";
   return `In ${days} days`;
 }
@@ -168,10 +159,6 @@ function comparePrograms(first, second, sort) {
   return 0;
 }
 
-function programFor(programs, task) {
-  return programs.find((program) => program.id === task.programIds?.[0]);
-}
-
 function TopNavigation({ route, navigate, openModal }) {
   const navigateFromMobile = (nextRoute) => navigate(nextRoute);
   return (
@@ -200,7 +187,7 @@ function TopNavigation({ route, navigate, openModal }) {
           <button className={`mobile-nav-item ${route === "applications" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("applications")} aria-current={route === "applications" ? "page" : undefined} aria-label="Applications" title="Applications"><span className="mobile-nav-icon"><FolderSimple size={23} weight={route === "applications" ? "duotone" : "regular"} /></span><span className="visually-hidden">Applications</span></button>
           <button className={`mobile-nav-item ${route === "programs" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("programs")} aria-current={route === "programs" ? "page" : undefined} aria-label="Programs" title="Programs"><span className="mobile-nav-icon"><GraduationCap size={23} weight={route === "programs" ? "duotone" : "regular"} /></span><span className="visually-hidden">Programs</span></button>
           <button className="mobile-nav-item mobile-nav-add" type="button" onClick={() => openModal({ type: "add-document" })} aria-label="Add document" title="Add document"><span className="mobile-nav-icon"><FilePlus size={27} weight="bold" /></span><span className="visually-hidden">Add document</span></button>
-          <button className={`mobile-nav-item ${route === "today" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("today")} aria-current={route === "today" ? "page" : undefined} aria-label="Today and deadlines" title="Today & deadlines"><span className="mobile-nav-icon"><CalendarCheck size={23} weight={route === "today" ? "duotone" : "regular"} /></span><span className="visually-hidden">Today and deadlines</span></button>
+          <button className={`mobile-nav-item ${route === "deadlines" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("deadlines")} aria-current={route === "deadlines" ? "page" : undefined} aria-label="Deadlines" title="Deadlines"><span className="mobile-nav-icon"><CalendarCheck size={23} weight={route === "deadlines" ? "duotone" : "regular"} /></span><span className="visually-hidden">Deadlines</span></button>
           <button className={`mobile-nav-item ${route === "documents" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("documents")} aria-current={route === "documents" ? "page" : undefined} aria-label="Document vault" title="Document vault"><span className="mobile-nav-icon"><FileText size={23} weight={route === "documents" ? "duotone" : "regular"} /></span><span className="visually-hidden">Document vault</span></button>
         </div>
       </nav>
@@ -270,123 +257,90 @@ function Pagination({ page, pageCount, pageSize, total, onPageChange, onPageSize
   );
 }
 
-function scheduleEvents(data) {
-  return [
-    ...data.tasks.map((task) => ({ id: `task-${task.id}`, date: task.dueDate, title: task.title, type: task.done ? "Complete" : "Task", task })),
-    ...deadlineEvents(data).map((event) => ({
-      ...event,
-      date: event.deadline,
-      title: `${event.program.name} · ${event.program.program}${event.application?.intake ? ` · ${event.application.intake}` : ""}`,
-      type: event.application ? "Application deadline" : "Program deadline",
-    })),
-  ].filter((event) => event.date).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+function deadlineTitle(event) {
+  const programName = event.program?.name || "Untitled program";
+  const program = event.program?.program ? ` · ${event.program.program}` : "";
+  return `${programName}${program}`;
 }
 
-function scheduleEventAction(event, openModal) {
-  if (event.task) return openModal({ type: "task", task: event.task });
+function deadlineAction(event, openModal) {
   if (event.application) return openModal({ type: "application", application: event.application });
   return openModal({ type: "program", program: event.program });
 }
 
-function AgendaList({ events, openModal }) {
-  return <div className="agenda-list">{events.map((event) => {
-    const date = formatTaskDate(event.date);
+function DeadlineAgenda({ events, openModal }) {
+  return <div className="deadline-agenda">{events.map((event) => {
+    const date = formatTaskDate(event.deadline);
+    const days = daysUntil(event.deadline);
+    const urgency = days < 0 ? "overdue" : days <= 14 ? "urgent" : days <= 30 ? "soon" : "steady";
     return (
-      <button type="button" className="agenda-row" key={event.id} onClick={() => scheduleEventAction(event, openModal)}>
-        <span className="agenda-date"><strong>{date.weekday}</strong><span>{date.date}</span></span>
-        <span className="agenda-dot" />
-        <span className="agenda-copy"><strong>{event.title}</strong><span>{event.type}</span></span>
-        <span className="due-chip"><Clock size={20} />{relativeDue(event.date)}</span>
+      <button type="button" className={`deadline-agenda-row ${urgency}`} key={event.id} onClick={() => deadlineAction(event, openModal)}>
+        <span className="deadline-agenda-date"><strong>{date.date}</strong><span>{date.weekday}</span></span>
+        <span className="deadline-agenda-marker" aria-hidden="true" />
+        <span className="deadline-agenda-copy"><strong>{deadlineTitle(event)}</strong><span>{event.application ? "Application deadline" : "Program deadline"}{event.application?.intake ? ` · ${event.application.intake}` : ""}</span></span>
+        <span className="deadline-status-chip"><Clock size={19} />{relativeDue(event.deadline)}</span>
         <CaretRight size={22} />
       </button>
     );
   })}</div>;
 }
 
-function TodayPage({ data, openModal }) {
-  const tasks = useMemo(
-    () => [...data.tasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5),
-    [data.tasks],
-  );
-  const nextTask = tasks.find((task) => !task.done);
-  const events = useMemo(() => scheduleEvents(data), [data]);
-  const nextEvent = events.find((event) => daysUntil(event.date) >= 0) || events[0];
+function DeadlinesPage({ data, openModal }) {
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const events = useMemo(() => deadlineEvents(data), [data]);
+  const nextEvent = events.find((event) => daysUntil(event.deadline) >= 0) || events[0];
+  const dueSoonCount = events.filter((event) => { const days = daysUntil(event.deadline); return days >= 0 && days <= 30; }).length;
+  const overdueCount = events.filter((event) => daysUntil(event.deadline) < 0).length;
+  const unscheduledCount = data.programs.filter((program) => !program.deadline).length;
+  const filteredEvents = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return events.filter((event) => {
+      const days = daysUntil(event.deadline);
+      if (filter === "next-30" && (days < 0 || days > 30)) return false;
+      if (filter === "overdue" && days >= 0) return false;
+      if (filter === "programs" && event.application) return false;
+      if (filter === "applications" && !event.application) return false;
+      if (search && !`${deadlineTitle(event)} ${event.program?.country || ""} ${event.program?.city || ""} ${event.application?.intake || ""}`.toLowerCase().includes(search)) return false;
+      return true;
+    });
+  }, [events, filter, query]);
 
   return (
-    <div className="page today-page">
+    <div className="page deadlines-page">
       <PageHeader
-        eyebrow={formatLongDate()}
-        title="Today & deadlines"
-        description="Your next action and every important application date, together in one calm workspace."
-        action={<PrimaryButton onClick={() => openModal({ type: "add-task" })}>Add task</PrimaryButton>}
+        eyebrow="Your application datebook"
+        title="Deadlines"
+        description="Every important program and application date, sorted so the next one is easy to spot."
+        action={<div className="deadline-page-actions"><button className="secondary-button soft-button" type="button" onClick={() => openModal({ type: "add-task" })}>Add task</button><PrimaryButton onClick={() => openModal({ type: "add-application" })}>Add application</PrimaryButton></div>}
       />
 
-      <section className="timeline-panel soft-inset" aria-labelledby="timeline-title">
-        <h2 id="timeline-title">Next 14 days</h2>
-        {tasks.length ? (
-          <div className="timeline-list">
-            {tasks.map((task) => {
-              const taskDate = formatTaskDate(task.dueDate);
-              const isNext = task.id === nextTask?.id;
-              const isUrgent = !task.done && task.priority === "High" && !isNext;
-              const program = programFor(data.programs, task);
-              return (
-                <article className={`timeline-item ${isNext ? "is-next" : ""} ${task.done ? "is-done" : ""}`} key={task.id}>
-                  <div className={`timeline-date ${isUrgent ? "urgent" : ""} ${task.done ? "done" : ""}`}>
-                    <strong>{isNext && daysUntil(task.dueDate) === 0 ? "Today" : taskDate.weekday}</strong>
-                    <span>{taskDate.date}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`timeline-node ${isNext ? "next" : ""} ${isUrgent ? "urgent" : ""} ${task.done ? "done" : ""}`}
-                    aria-label={`Open ${task.title}`}
-                    onClick={() => openModal({ type: "task", task })}
-                  >
-                    {task.done ? <Check size={17} weight="bold" /> : null}
-                  </button>
-                  {isNext ? (
-                    <div className="next-action-card soft-panel">
-                      <div>
-                        <span className="section-kicker">Next best action</span>
-                        <h3>{task.title}</h3>
-                        <p>
-                          {task.programIds?.length > 1
-                            ? `Unlocks ${task.programIds.length} applications: ${task.programIds.map((id) => data.programs.find((item) => item.id === id)?.name).filter(Boolean).join(", ")}`
-                            : program?.name}
-                        </p>
-                      </div>
-                      <PrimaryButton icon={ArrowRight} className="start-task-button" onClick={() => openModal({ type: "task", task })}>Start task</PrimaryButton>
-                    </div>
-                  ) : (
-                    <button type="button" className="timeline-row" onClick={() => openModal({ type: "task", task })}>
-                      <span className="task-copy"><strong>{task.title}</strong><span>{program?.name || "General"}</span></span>
-                      <span className={`due-chip ${isUrgent ? "urgent" : ""} ${task.done ? "done" : ""}`}>
-                        {task.done ? <CheckCircle size={22} /> : isUrgent ? <WarningCircle size={22} /> : <Clock size={22} />}
-                        {task.done ? "Done" : relativeDue(task.dueDate)}
-                      </span>
-                      <CaretRight size={25} />
-                    </button>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        ) : <EmptyState title="Your timeline is clear" description="Add a task to plan your next application step." />}
+      <section className="deadline-hero soft-panel" aria-labelledby="deadline-hero-title">
+        <div className="deadline-hero-copy">
+          <span className="section-kicker">Deadline desk</span>
+          <h2 id="deadline-hero-title">See the dates before they become emergencies.</h2>
+          <p>Use this page as your visual runway: check what is close, clear overdue dates, and open any deadline to update the source record.</p>
+        </div>
+        <div className="deadline-hero-note">
+          <span>Next on the radar</span>
+          {nextEvent ? <><strong>{formatDeadlineDate(nextEvent.deadline)}</strong><p>{deadlineTitle(nextEvent)}</p><small>{relativeDue(nextEvent.deadline)} · {nextEvent.application ? "Application" : "Program"}</small></> : <><strong>No dates yet</strong><p>Add a program or application deadline to start your runway.</p></>}
+        </div>
       </section>
 
-      <section className="calendar-panel soft-panel combined-schedule" aria-labelledby="schedule-title">
-        <div className="combined-schedule-heading">
-          <div>
-            <span className="section-kicker">Plan ahead</span>
-            <h2 id="schedule-title">Tasks & deadlines</h2>
-            <p>One agenda for the dates that move your applications forward.</p>
-          </div>
-          <span className="schedule-count">{events.length} {events.length === 1 ? "date" : "dates"}</span>
+      <section className="deadline-metrics" aria-label="Deadline summary">
+        <article className="deadline-metric deadline-metric-next soft-inset"><span className="deadline-metric-icon"><CalendarBlank size={24} weight="duotone" /></span><div><span>Next date</span><strong>{nextEvent ? formatDeadlineDate(nextEvent.deadline) : "—"}</strong><small>{nextEvent ? relativeDue(nextEvent.deadline) : "Nothing scheduled"}</small></div></article>
+        <article className="deadline-metric deadline-metric-soon soft-inset"><span className="deadline-metric-icon"><Clock size={24} weight="duotone" /></span><div><span>Due within 30 days</span><strong>{dueSoonCount}</strong><small>{dueSoonCount === 1 ? "date needs attention" : "dates need attention"}</small></div></article>
+        <article className="deadline-metric deadline-metric-overdue soft-inset"><span className="deadline-metric-icon"><WarningCircle size={24} weight="duotone" /></span><div><span>Overdue</span><strong>{overdueCount}</strong><small>{overdueCount ? "Open and update these dates" : "You are all caught up"}</small></div></article>
+        <article className="deadline-metric deadline-metric-unscheduled soft-inset"><span className="deadline-metric-icon"><GraduationCap size={24} weight="duotone" /></span><div><span>Programs without dates</span><strong>{unscheduledCount}</strong><small>{unscheduledCount ? "Add dates from your shortlist" : "Every program has a date"}</small></div></article>
+      </section>
+
+      <section className="deadline-board soft-panel" aria-labelledby="deadline-board-title">
+        <div className="deadline-board-heading"><div><span className="section-kicker">Your datebook</span><h2 id="deadline-board-title">All tracked deadlines</h2><p>Open a row to edit the program or application it belongs to.</p></div><span className="deadline-count">{filteredEvents.length} of {events.length} dates</span></div>
+        <div className="deadline-board-controls">
+          <label className="search-field soft-inset"><MagnifyingGlass size={21} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search deadlines…" aria-label="Search deadlines" />{query ? <button className="search-clear" type="button" onClick={() => setQuery("")} aria-label="Clear deadline search"><X size={17} /></button> : null}</label>
+          <div className="segmented soft-inset" aria-label="Deadline filters"><button className={filter === "all" ? "active" : ""} type="button" onClick={() => setFilter("all")}>All</button><button className={filter === "next-30" ? "active" : ""} type="button" onClick={() => setFilter("next-30")}>Next 30 days</button><button className={filter === "overdue" ? "active" : ""} type="button" onClick={() => setFilter("overdue")}>Overdue</button><button className={filter === "programs" ? "active" : ""} type="button" onClick={() => setFilter("programs")}>Programs</button><button className={filter === "applications" ? "active" : ""} type="button" onClick={() => setFilter("applications")}>Applications</button></div>
         </div>
-        {events.length ? <>
-          <div className="calendar-summary soft-inset"><CalendarBlank size={32} weight="duotone" /><div><span>Next date</span><strong>{nextEvent.title}</strong><small>{formatDeadlineDate(nextEvent.date)} · {nextEvent.type}</small></div></div>
-          <AgendaList events={events} openModal={openModal} />
-        </> : <div className="schedule-empty"><EmptyState title="Your schedule is clear" description="Add a task or start an application with a deadline to see your plan here." /></div>}
+        {filteredEvents.length ? <DeadlineAgenda events={filteredEvents} openModal={openModal} /> : <div className="deadline-empty"><EmptyState title={events.length ? "No deadlines match" : "Your datebook is waiting"} description={events.length ? "Try a different search or filter." : "Add a program deadline or start an application to give your datebook something to track."} /></div>}
       </section>
     </div>
   );
@@ -588,7 +542,7 @@ function HomePage({ data, openModal, navigate }) {
     { number: "01", icon: GraduationCap, eyebrow: "Discover", title: "Find programs that fit", description: "Search the shared catalog by country, language, degree, deadline, or QS ranking.", action: "Browse programs", onClick: () => navigate("programs") },
     { number: "02", icon: FolderSimple, eyebrow: "Shortlist", title: "Save the ones worth pursuing", description: "Keep promising programs together, then start an application when the fit feels right.", action: "Build a shortlist", onClick: () => navigate("programs") },
     { number: "03", icon: FileText, eyebrow: "Prepare", title: "Build a connected dossier", description: "Link documents, requirements, and professor contacts to each application.", action: "Open document vault", onClick: () => navigate("documents") },
-    { number: "04", icon: CalendarCheck, eyebrow: "Move forward", title: "Make the next step visible", description: "Track stages, tasks, and deadlines so nothing important stays in your head.", action: "See deadlines", onClick: () => navigate("calendar") },
+    { number: "04", icon: CalendarCheck, eyebrow: "Move forward", title: "Make the next date visible", description: "Track stages, tasks, and deadlines so nothing important stays in your head.", action: "See deadlines", onClick: () => navigate("deadlines") },
   ];
 
   return (
@@ -607,7 +561,7 @@ function HomePage({ data, openModal, navigate }) {
         <div className="home-hero-visual" aria-label="A preview of the connected application workflow">
           <div className="home-hero-badge"><span>START HERE</span><strong>One place for every next step.</strong></div>
           <div className="home-hero-image-frame"><img src={emptyApplication} alt="Illustration of an organized graduate application workspace" /></div>
-          <div className="home-hero-float"><CalendarCheck size={23} /><span><small>Keep deadlines visible</small><strong>Today’s next step</strong></span></div>
+          <div className="home-hero-float"><CalendarCheck size={23} /><span><small>Keep deadlines visible</small><strong>Your next date</strong></span></div>
         </div>
       </section>
 
@@ -869,8 +823,8 @@ export function App() {
     return () => { window.removeEventListener("hashchange", handleHash); window.removeEventListener("beforeinstallprompt", handleInstall); };
   }, []);
   useEffect(() => { if (!toast) return undefined; const timeout = window.setTimeout(() => setToast(""), 3600); return () => window.clearTimeout(timeout); }, [toast]);
-  useEffect(() => { document.title = `Kamiunity — ${NAV_ITEMS.find((item) => item.id === route)?.label || (route === "backup" ? "Backup & transfer" : "Today & deadlines")}`; }, [route]);
-  function navigate(next) { const target = next === "calendar" ? "today" : next; window.location.hash = `/${target}`; setRoute(target); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  useEffect(() => { document.title = `Kamiunity — ${NAV_ITEMS.find((item) => item.id === route)?.label || (route === "backup" ? "Backup & transfer" : "Deadlines")}`; }, [route]);
+  function navigate(next) { const target = ["today", "calendar"].includes(next) ? "deadlines" : next; window.location.hash = `/${target}`; setRoute(target); window.scrollTo({ top: 0, behavior: "smooth" }); }
   async function installApp() { if (!installPrompt) return; await installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null); }
   async function syncProgramCatalog(inputUrl) {
     const result = await syncCatalogFromUrl(inputUrl);
@@ -903,7 +857,7 @@ export function App() {
     return programId;
   }
   const common = { data, refresh, notify: setToast, openModal: setModal, navigate, addCatalogProgram, syncCatalog: syncProgramCatalog, importCatalog: importProgramCatalog, resetCatalog: resetProgramCatalog };
-  const pages = { today: <TodayPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, documents: <DocumentsPage {...common} />, calendar: <TodayPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} /> };
+  const pages = { deadlines: <DeadlinesPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, documents: <DocumentsPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} /> };
   if (!ready) return <main className="loading-screen"><img className="loading-brand" src={kamiunityLogo} alt="kamiunity" /><strong>{loadError ? "Your workspace could not open" : "Opening your application workspace…"}</strong><span role={loadError ? "alert" : undefined}>{loadError || "Your records stay on this device."}</span>{loadError ? <button className="secondary-button soft-button" type="button" onClick={() => window.location.reload()}>Try again</button> : null}</main>;
   return (
     <div className="app-shell kamiunity">

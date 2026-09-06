@@ -137,7 +137,7 @@ export function ApplicationForm({ data, application, programId, focusSection, re
     <Section title="Submission, fees & decision"><Fields form={form} change={change} definitions={[["applicationFee", "Application fee"], ["feeStatus", "Fee status", "text", { options: ["Not paid", "Paid", "Waiver requested", "Waived", "Not required"] }], ["submittedAt", "Submission date", "date"], ["decisionDate", "Decision date", "date"], ["decision", "Decision outcome", "text", { options: ["", "Awaiting decision", "Accepted", "Conditional offer", "Waitlisted", "Rejected", "Withdrawn", "Enrolled"] }], ["funding", "Funding / scholarship"]]} /></Section>
     <Section id="application-contacts" title={`Professors & contacts · ${form.professors?.length || 0}`} open={focusSection === "contacts"}><Field label="Admissions email" type="email" value={form.admissionsEmail} onChange={(value) => change("admissionsEmail", value)} /><ProfessorFields value={form.professors} onChange={(value) => change("professors", value)} /></Section>
     <Section title="Requirements & notes"><Fields form={form} change={change} definitions={[["requirements", "Required documents & prerequisites", "textarea"], ["notes", "Application notes / next steps", "textarea"]]} /></Section>
-    {application ? <p className="field-help">These application details are saved independently of the program. Manage related tasks from Today or Calendar.</p> : null}
+    {application ? <p className="field-help">These application details are saved independently of the program. Manage related tasks from the Deadlines page or this application workspace.</p> : null}
     <FormFooter busy={busy} error={error} close={close} label={application ? "Save application" : "Create application"} />
   </form></Modal>;
 }

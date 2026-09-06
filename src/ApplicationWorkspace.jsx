@@ -14,7 +14,7 @@ function fullDate(value) {
 function deadlineCopy(value) {
   if (!value) return "Add a deadline";
   const difference = Math.round((new Date(`${value}T12:00:00`) - new Date(`${toIsoDate(new Date())}T12:00:00`)) / 86400000);
-  return difference < 0 ? `${Math.abs(difference)} days overdue` : difference === 0 ? "Due today" : `${difference} days left`;
+  return difference < 0 ? `${Math.abs(difference)} days overdue` : difference === 0 ? "Due now" : `${difference} days left`;
 }
 
 export function ReadinessBadge({ status }) {
@@ -67,7 +67,7 @@ export function ApplicationWorkspace({ data, openModal, refresh, notify, navigat
       <div className="application-index-list">{visible.map(({ application: item, program: school }) => <button className={`application-index-item ${application?.id === item.id ? "selected" : ""}`} type="button" key={item.id} aria-pressed={application?.id === item.id} onClick={() => setSelectedId(item.id)}>
         <strong>{school?.name || "Program unavailable"}</strong><span>{school?.program || "Edit this application to add program details"}</span><small>{item.intake || `Application #${item.id}`}</small><span className="index-deadline"><CalendarBlank size={17} />{fullDate(item.deadline)}</span><span className={`application-stage-pill ${item.status === "Preparing" ? "preparing" : ""}`}><Circle size={14} />{item.status}</span>
       </button>)}{!visible.length ? <p className="index-empty">{query ? "No matching applications." : "Start with a program from your shortlist."}</p> : null}</div>
-      <div className="index-footer"><button type="button" onClick={() => navigate("today")}><ListChecks size={21} />Today’s next steps<ArrowRight size={18} /></button><button type="button" onClick={onOpenTable}>Open table & board<ArrowSquareOut size={17} /></button><button type="button" onClick={() => navigate("backup")}>Backup & transfer<ArrowRight size={17} /></button></div>
+      <div className="index-footer"><button type="button" onClick={() => navigate("deadlines")}><ListChecks size={21} />Deadline plan<ArrowRight size={18} /></button><button type="button" onClick={onOpenTable}>Open table & board<ArrowSquareOut size={17} /></button><button type="button" onClick={() => navigate("backup")}>Backup & transfer<ArrowRight size={17} /></button></div>
     </aside>
     {application ? <article className="application-dossier">
       <div className="dossier-breadcrumb"><span>Applications<span aria-hidden="true">/</span>{program?.name || "Application"}</span><div className="dossier-header-actions"><button className="text-action" type="button" onClick={() => edit("tracking")}><NotePencil size={17} />Edit details</button><button className="text-action danger-text-action" type="button" onClick={() => setConfirmRemove(true)}><Trash size={17} />Remove application</button></div></div>

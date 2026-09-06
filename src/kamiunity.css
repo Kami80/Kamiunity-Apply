@@ -5,22 +5,22 @@
   --teal-light: #8cb9c0;
   --sage: #91b5a9;
   --amber: #edca7f;
-  --canvas: #f6f8f7;
-  --surface: rgba(255, 255, 255, 0.72);
-  --surface-raised: rgba(255, 255, 255, 0.9);
-  --ink: #304b50;
-  --muted: #60777b;
-  --line: rgba(48, 75, 80, 0.15);
-  --teal: #3f7f87;
-  --teal-dark: #2f626b;
-  --teal-soft: #d9ecee;
+  --canvas: #fff7ec;
+  --surface: rgba(255, 251, 244, 0.84);
+  --surface-raised: rgba(255, 253, 248, 0.94);
+  --ink: #3d3040;
+  --muted: #766876;
+  --line: rgba(61, 48, 64, 0.16);
+  --teal: #d94841;
+  --teal-dark: #7f3948;
+  --teal-soft: #f5ded8;
   --coral: #d94841;
   --coral-soft: #f5d9d6;
-  --green: #568a7c;
-  --shadow-soft: 8px 10px 22px rgba(48, 75, 80, 0.16), -7px -8px 18px rgba(255, 255, 255, 0.94);
-  --shadow-raised: 14px 17px 38px rgba(48, 75, 80, 0.15), -11px -13px 30px rgba(255, 255, 255, 0.92);
-  --shadow-inset: inset 5px 6px 13px rgba(48, 75, 80, 0.14), inset -5px -6px 13px rgba(255, 255, 255, 0.86);
-  --focus: 0 0 0 3px rgba(120, 146, 181, 0.42), 0 0 0 6px rgba(237, 202, 127, 0.24);
+  --green: #648d79;
+  --shadow-soft: 8px 10px 22px rgba(111, 74, 75, 0.17), -7px -8px 18px rgba(255, 255, 255, 0.94);
+  --shadow-raised: 14px 17px 38px rgba(111, 74, 75, 0.17), -11px -13px 30px rgba(255, 255, 255, 0.93);
+  --shadow-inset: inset 5px 6px 13px rgba(111, 74, 75, 0.14), inset -5px -6px 13px rgba(255, 255, 255, 0.88);
+  --focus: 0 0 0 3px rgba(120, 146, 181, 0.46), 0 0 0 6px rgba(237, 202, 127, 0.3);
 }
 body { background: var(--canvas); }
 .kamiunity .topbar { min-height: 92px; padding: 0 28px; gap: clamp(18px, 2.4vw, 36px); background: rgba(247, 244, 240, 0.94); box-shadow: 0 7px 22px rgba(126, 119, 111, 0.11); border-color: var(--line); }
@@ -676,4 +676,638 @@ body {
     height: 60px;
   }
 
+}
+
+/* Retro vibrant direction: a warm paper canvas, punchy accents, and soft glass. */
+:root {
+  --peach: #e9b9aa;
+  --red: #d94841;
+  --blue: #7892b5;
+  --teal-light: #8cb9c0;
+  --sage: #91b5a9;
+  --amber: #edca7f;
+  --canvas: #fff7ec;
+  --surface: rgba(255, 251, 244, 0.84);
+  --surface-raised: rgba(255, 253, 248, 0.94);
+  --ink: #3d3040;
+  --muted: #766876;
+  --line: rgba(61, 48, 64, 0.16);
+  --teal: #d94841;
+  --teal-dark: #7f3948;
+  --teal-soft: #f5ded8;
+  --coral: #d94841;
+  --coral-soft: #f5d9d6;
+  --green: #648d79;
+  --shadow-soft: 8px 10px 22px rgba(111, 74, 75, 0.17), -7px -8px 18px rgba(255, 255, 255, 0.94);
+  --shadow-raised: 14px 17px 38px rgba(111, 74, 75, 0.17), -11px -13px 30px rgba(255, 255, 255, 0.93);
+  --shadow-inset: inset 5px 6px 13px rgba(111, 74, 75, 0.14), inset -5px -6px 13px rgba(255, 255, 255, 0.88);
+  --focus: 0 0 0 3px rgba(120, 146, 181, 0.46), 0 0 0 6px rgba(237, 202, 127, 0.3);
+}
+
+body {
+  background:
+    radial-gradient(circle at 4% 0%, rgba(233, 185, 170, 0.32), transparent 28rem),
+    radial-gradient(circle at 96% 12%, rgba(237, 202, 127, 0.27), transparent 24rem),
+    var(--canvas);
+}
+
+.kamiunity {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 4% 0%, rgba(233, 185, 170, 0.28), transparent 27rem),
+    radial-gradient(circle at 96% 12%, rgba(237, 202, 127, 0.24), transparent 24rem),
+    repeating-linear-gradient(0deg, rgba(127, 57, 72, 0.018) 0 1px, transparent 1px 5px),
+    var(--canvas);
+}
+
+.kamiunity .app-main,
+.kamiunity .desktop-navigation {
+  position: relative;
+  z-index: 1;
+}
+
+.kamiunity .desktop-navigation {
+  border-bottom-color: rgba(127, 57, 72, 0.12);
+  background: rgba(255, 250, 242, 0.78);
+  box-shadow: 0 12px 30px rgba(111, 74, 75, 0.12);
+  -webkit-backdrop-filter: blur(24px) saturate(135%);
+  backdrop-filter: blur(24px) saturate(135%);
+}
+
+.kamiunity .desktop-navigation .topnav {
+  border-color: rgba(255, 255, 255, 0.86);
+  background: rgba(237, 202, 127, 0.2);
+  box-shadow: 10px 12px 28px rgba(111, 74, 75, 0.13), -8px -8px 22px rgba(255, 255, 255, 0.86);
+}
+
+.kamiunity .desktop-navigation .nav-item {
+  color: var(--ink);
+}
+
+.kamiunity .desktop-navigation .nav-item > svg {
+  color: var(--red);
+}
+
+.kamiunity .desktop-navigation .nav-item:nth-child(2) > svg { color: var(--blue); }
+.kamiunity .desktop-navigation .nav-item:nth-child(3) > svg { color: var(--sage); }
+.kamiunity .desktop-navigation .nav-item:nth-child(4) > svg { color: var(--amber); }
+
+.kamiunity .desktop-navigation .nav-item.active {
+  background: rgba(233, 185, 170, 0.42);
+  color: var(--teal-dark);
+  box-shadow: 7px 8px 17px rgba(111, 74, 75, 0.15), -5px -5px 14px rgba(255, 255, 255, 0.88);
+}
+
+.kamiunity .desktop-navigation .nav-item.active > svg,
+.kamiunity .brand-utilities > span svg {
+  color: var(--red);
+}
+
+.kamiunity .backup-nav-button {
+  border-color: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 253, 248, 0.72);
+  color: var(--teal-dark);
+}
+
+.kamiunity .backup-nav-button:hover,
+.kamiunity .backup-nav-button.active {
+  background: rgba(233, 185, 170, 0.48);
+  color: var(--teal-dark);
+}
+
+.kamiunity .soft-panel,
+.kamiunity .workspace-panel,
+.kamiunity .calendar-panel,
+.kamiunity .document-list,
+.kamiunity .document-detail,
+.kamiunity .backup-card,
+.kamiunity .catalog-connection,
+.kamiunity .program-filters-panel,
+.kamiunity .program-shortlist-desktop,
+.kamiunity .program-shortlist-mobile {
+  border-color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 253, 248, 0.66);
+  box-shadow: var(--shadow-raised);
+  -webkit-backdrop-filter: blur(20px) saturate(128%);
+  backdrop-filter: blur(20px) saturate(128%);
+}
+
+.kamiunity .soft-inset {
+  border-color: rgba(255, 255, 255, 0.78);
+  background: rgba(233, 185, 170, 0.17);
+  -webkit-backdrop-filter: blur(18px) saturate(128%);
+  backdrop-filter: blur(18px) saturate(128%);
+}
+
+.kamiunity .primary-button {
+  background: var(--red);
+  box-shadow: 5px 8px 15px rgba(217, 72, 65, 0.25), -3px -3px 8px rgba(255, 255, 255, 0.5);
+}
+
+.kamiunity .primary-button:hover {
+  background: #ae3d43;
+  box-shadow: 7px 10px 20px rgba(127, 57, 72, 0.3), -4px -4px 10px rgba(255, 255, 255, 0.6);
+}
+
+.kamiunity .secondary-button,
+.kamiunity .danger-button,
+.kamiunity .data-table select,
+.kamiunity .kanban-card select,
+.kamiunity .field-label input,
+.kamiunity .form-stack input,
+.kamiunity .form-stack select,
+.kamiunity .form-stack textarea {
+  border-color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 249, 239, 0.74);
+  -webkit-backdrop-filter: blur(14px) saturate(128%);
+  backdrop-filter: blur(14px) saturate(128%);
+}
+
+.kamiunity .eyebrow,
+.kamiunity .section-kicker {
+  color: var(--red);
+}
+
+.kamiunity .page-header h1,
+.kamiunity .home-hero-copy h1,
+.kamiunity .deadline-hero-copy h2,
+.kamiunity .deadline-board-heading h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--ink);
+}
+
+.kamiunity .feature-icon {
+  background: rgba(237, 202, 127, 0.28);
+  color: var(--teal-dark);
+}
+
+.kamiunity .home-hero::before {
+  background: rgba(233, 185, 170, 0.42);
+}
+
+.kamiunity .home-hero-float {
+  background: rgba(237, 202, 127, 0.54);
+  color: var(--teal-dark);
+}
+
+.kamiunity .home-hero-float small {
+  color: #765b36;
+}
+
+.kamiunity .catalog-result:hover,
+.kamiunity .data-table tbody tr:hover,
+.kamiunity .agenda-row:hover {
+  background: rgba(233, 185, 170, 0.17);
+}
+
+.kamiunity .program-category-badge {
+  background: rgba(140, 185, 192, 0.3);
+  color: var(--teal-dark) !important;
+}
+
+.kamiunity .priority-label.high {
+  background: rgba(217, 72, 65, 0.17);
+  color: #963b37;
+}
+
+.kamiunity .priority-label.low {
+  background: rgba(120, 146, 181, 0.2);
+  color: #4b6689;
+}
+
+.kamiunity .priority-label:not(.high):not(.low) {
+  background: rgba(237, 202, 127, 0.35);
+  color: #806221;
+}
+
+.kamiunity .date-text {
+  color: var(--teal-dark);
+}
+
+/* Deadline desk */
+.deadlines-page {
+  padding-bottom: 52px;
+}
+
+.deadline-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.deadline-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(270px, 0.65fr);
+  align-items: center;
+  gap: 30px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border-radius: 23px;
+  padding: 32px 36px;
+  background: linear-gradient(112deg, rgba(255, 253, 248, 0.82) 0%, rgba(255, 249, 239, 0.68) 57%, rgba(237, 202, 127, 0.43) 100%);
+}
+
+.deadline-hero::after {
+  position: absolute;
+  right: -74px;
+  bottom: -118px;
+  width: 320px;
+  height: 320px;
+  border: 2px solid rgba(217, 72, 65, 0.2);
+  border-radius: 50%;
+  box-shadow: 0 0 0 19px rgba(233, 185, 170, 0.13), 0 0 0 38px rgba(120, 146, 181, 0.09);
+  content: "";
+  pointer-events: none;
+}
+
+.deadline-hero-copy,
+.deadline-hero-note {
+  position: relative;
+  z-index: 1;
+}
+
+.deadline-hero-copy {
+  max-width: 690px;
+}
+
+.deadline-hero-copy h2 {
+  max-width: 650px;
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1.05;
+}
+
+.deadline-hero-copy p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.96rem;
+  line-height: 1.7;
+}
+
+.deadline-hero-note {
+  width: min(100%, 350px);
+  justify-self: end;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 18px;
+  padding: 20px 22px;
+  background: rgba(255, 253, 248, 0.64);
+  box-shadow: var(--shadow-soft);
+}
+
+.deadline-hero-note > span,
+.deadline-metric > div > span,
+.deadline-board-heading > div > .section-kicker {
+  color: var(--red);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.deadline-hero-note strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--teal-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.45rem;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.deadline-hero-note p {
+  margin: 10px 0 5px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.deadline-hero-note small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.deadline-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.deadline-metric {
+  display: flex;
+  min-width: 0;
+  min-height: 125px;
+  align-items: flex-start;
+  gap: 12px;
+  border-radius: 17px;
+  padding: 18px;
+}
+
+.deadline-metric-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+}
+
+.deadline-metric-next .deadline-metric-icon { background: rgba(217, 72, 65, 0.16); color: var(--red); }
+.deadline-metric-soon .deadline-metric-icon { background: rgba(237, 202, 127, 0.37); color: #8a6722; }
+.deadline-metric-overdue .deadline-metric-icon { background: rgba(233, 185, 170, 0.42); color: #a43e3e; }
+.deadline-metric-unscheduled .deadline-metric-icon { background: rgba(145, 181, 169, 0.3); color: #4d7a6a; }
+
+.deadline-metric > div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.deadline-metric > div > span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.07em;
+}
+
+.deadline-metric strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deadline-metric small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deadline-board {
+  overflow: hidden;
+  border-radius: 21px;
+}
+
+.deadline-board-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 25px 28px 17px;
+}
+
+.deadline-board-heading h2 {
+  margin: 4px 0 6px;
+  font-size: 1.72rem;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+
+.deadline-board-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.deadline-count {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 8px 11px;
+  background: rgba(237, 202, 127, 0.39);
+  color: #806221;
+  font-size: 0.68rem;
+  font-weight: 780;
+}
+
+.deadline-board-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 28px 18px;
+}
+
+.deadline-board-controls .search-field {
+  width: auto;
+  max-width: 370px;
+  flex: 1 1 250px;
+}
+
+.deadline-board-controls .segmented {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.deadline-board-controls .segmented::-webkit-scrollbar { display: none; }
+.deadline-board-controls .segmented button { flex: 0 0 auto; white-space: nowrap; }
+
+.deadline-agenda {
+  display: grid;
+}
+
+.deadline-agenda-row {
+  display: grid;
+  width: 100%;
+  min-height: 92px;
+  grid-template-columns: 100px 18px minmax(0, 1fr) auto 22px;
+  align-items: center;
+  gap: 18px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 28px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.deadline-agenda-row:last-child { border-bottom: 0; }
+.deadline-agenda-row:hover { background: rgba(233, 185, 170, 0.17); }
+
+.deadline-agenda-date,
+.deadline-agenda-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deadline-agenda-date strong {
+  color: var(--teal-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.18rem;
+  letter-spacing: -0.03em;
+}
+
+.deadline-agenda-date span {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 780;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deadline-agenda-marker {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--sage);
+  box-shadow: 0 0 0 5px rgba(145, 181, 169, 0.2);
+}
+
+.deadline-agenda-row.soon .deadline-agenda-marker { background: #c3912f; box-shadow: 0 0 0 5px rgba(237, 202, 127, 0.3); }
+.deadline-agenda-row.urgent .deadline-agenda-marker,
+.deadline-agenda-row.overdue .deadline-agenda-marker { background: var(--red); box-shadow: 0 0 0 5px rgba(217, 72, 65, 0.18); }
+
+.deadline-agenda-copy strong {
+  overflow: hidden;
+  font-size: 0.87rem;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deadline-agenda-copy span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deadline-status-chip {
+  display: inline-flex;
+  min-width: 132px;
+  min-height: 37px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  padding: 0 11px;
+  background: rgba(237, 202, 127, 0.24);
+  box-shadow: var(--shadow-soft);
+  color: #806221;
+  font-size: 0.7rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.deadline-agenda-row.urgent .deadline-status-chip,
+.deadline-agenda-row.overdue .deadline-status-chip {
+  background: rgba(217, 72, 65, 0.14);
+  color: #a43e3e;
+}
+
+.deadline-empty .empty-state {
+  min-height: 255px;
+  border: 1px dashed rgba(127, 57, 72, 0.24);
+  margin: 20px 28px 28px;
+  border-radius: 16px;
+  background: rgba(233, 185, 170, 0.11);
+}
+
+.kamiunity .mobile-nav-item:nth-child(1) .mobile-nav-icon { color: var(--blue); }
+.kamiunity .mobile-nav-item:nth-child(2) .mobile-nav-icon { color: var(--sage); }
+.kamiunity .mobile-nav-item:nth-child(3) .mobile-nav-icon { color: var(--teal-light); }
+.kamiunity .mobile-nav-item:nth-child(4) .mobile-nav-icon { color: var(--red); }
+.kamiunity .mobile-nav-item:nth-child(5) .mobile-nav-icon { color: var(--amber); }
+
+.kamiunity .mobile-nav-item.active:not(.mobile-nav-add) .mobile-nav-icon {
+  background: rgba(233, 185, 170, 0.38);
+  color: var(--teal-dark);
+  box-shadow: 5px 6px 12px rgba(111, 74, 75, 0.14), -4px -4px 9px rgba(255, 255, 255, 0.88);
+}
+
+.kamiunity .mobile-nav-add .mobile-nav-icon {
+  background: var(--teal-dark);
+  box-shadow: 0 14px 23px rgba(127, 57, 72, 0.3), 0 0 0 5px rgba(233, 185, 170, 0.42);
+}
+
+.kamiunity .mobile-nav-add:hover .mobile-nav-icon { background: var(--red); }
+
+@media (max-width: 1050px) {
+  .deadline-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 820px) {
+  .deadlines-page { padding-bottom: 142px; }
+  .deadline-hero { grid-template-columns: 1fr; gap: 22px; padding: 28px; }
+  .deadline-hero-note { width: 100%; justify-self: stretch; }
+  .deadline-board-controls { align-items: stretch; flex-direction: column; padding-inline: 20px; }
+  .deadline-board-controls .search-field { width: 100%; max-width: none; }
+  .deadline-board-controls .segmented { width: 100%; }
+  .deadline-board-heading { padding-inline: 20px; }
+  .deadline-agenda-row { grid-template-columns: 78px 14px minmax(0, 1fr) auto 20px; gap: 12px; padding-inline: 20px; }
+}
+
+@media (max-width: 560px) {
+  .deadline-page-actions { width: 100%; align-items: stretch; }
+  .deadline-page-actions > * { flex: 1; }
+  .deadline-hero { border-radius: 16px; padding: 21px; }
+  .deadline-hero-copy h2 { font-size: 2.15rem; }
+  .deadline-hero-copy p { font-size: 0.84rem; }
+  .deadline-hero-note { padding: 17px; }
+  .deadline-hero-note strong { font-size: 2rem; }
+  .deadline-metrics { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .deadline-metric { min-height: 116px; gap: 9px; padding: 13px; }
+  .deadline-metric-icon { width: 35px; height: 35px; border-radius: 10px; }
+  .deadline-metric > div > span { font-size: 0.56rem; }
+  .deadline-metric strong { font-size: 1.25rem; }
+  .deadline-metric small { font-size: 0.61rem; white-space: normal; }
+  .deadline-board { border-radius: 16px; }
+  .deadline-board-heading { align-items: stretch; flex-direction: column; gap: 10px; padding: 20px; }
+  .deadline-board-heading h2 { font-size: 1.48rem; }
+  .deadline-count { align-self: flex-start; }
+  .deadline-board-controls { padding-inline: 14px; }
+  .deadline-agenda-row { grid-template-columns: 58px 12px minmax(0, 1fr) 22px; gap: 9px; padding: 14px; }
+  .deadline-agenda-date strong { font-size: 0.97rem; }
+  .deadline-agenda-date span { font-size: 0.57rem; }
+  .deadline-agenda-copy { align-self: start; padding-top: 2px; }
+  .deadline-agenda-copy strong { font-size: 0.78rem; white-space: normal; }
+  .deadline-agenda-copy span { font-size: 0.62rem; white-space: normal; }
+  .deadline-status-chip { grid-column: 3; grid-row: 2; min-width: 0; min-height: 30px; width: fit-content; padding-inline: 9px; font-size: 0.62rem; }
+  .deadline-agenda-row > svg { grid-column: 4; grid-row: 1 / span 2; }
+  .deadline-empty .empty-state { margin-inline: 14px; padding-inline: 20px; }
+}
+
+@media (max-width: 460px) {
+  .deadline-metrics { grid-template-columns: 1fr; }
+}
+
+/* Keep compact program labels readable instead of clipping their copy. */
+.kamiunity .catalog-result h3,
+.kamiunity .catalog-result-main p,
+.kamiunity .shortlist-card-kicker,
+.kamiunity .shortlist-card-identity .record-link strong,
+.kamiunity .shortlist-card-identity .record-link span {
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.kamiunity .program-category-badge,
+.kamiunity .catalog-result-meta .program-category-badge {
+  max-width: 100%;
+  margin-left: 0;
+  border-left: 0;
+  padding: 5px 9px;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
 }
