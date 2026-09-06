@@ -40,7 +40,11 @@ import { db, PROFILE_LOOKUP_EMAIL_SETTING_KEY, PROFILE_SETTING_KEY, readAllData,
 import { PrimaryButton } from "./ui.jsx";
 import kamiunityLogo from "./assets/kamiunity-logo.png";
 import emptyApplication from "./assets/empty-application.png";
+import emptyApplicationDark from "./assets/empty-application-dark.png";
 import emptyDocuments from "./assets/empty-documents.png";
+import emptyDocumentsDark from "./assets/empty-documents-dark.png";
+import emptyCalendar from "./assets/empty-calendar.png";
+import emptyCalendarDark from "./assets/empty-calendar-dark.png";
 import { ApplicationChecklistForm, ApplicationWorkspace } from "./ApplicationWorkspace.jsx";
 import { ApplicationForm, DocumentForm, ExternalLink, ProgramForm, TaskForm } from "./WorkflowForms.jsx";
 import { catalogToProgram, importCatalogCsv, programKey, replaceCatalog, syncCatalogFromUrl } from "./catalog.js";
@@ -264,10 +268,10 @@ function EmptyState({ title, description }) {
   );
 }
 
-function FirstUseState({ image, imageAlt = "", eyebrow, title, description, primaryLabel, onPrimary, secondaryLabel, onSecondary, className = "" }) {
+function FirstUseState({ image, darkImage, theme = "light", imageAlt = "", eyebrow, title, description, primaryLabel, onPrimary, secondaryLabel, onSecondary, className = "" }) {
   return (
     <section className={`first-use-state soft-panel ${className}`}>
-      <div className="first-use-art-wrap"><img className="first-use-art" src={image} alt={imageAlt} /></div>
+      <div className="first-use-art-wrap"><img className="first-use-art" src={theme === "dark" && darkImage ? darkImage : image} alt={imageAlt} /></div>
       <div className="first-use-copy">
         {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
         <h2>{title}</h2>
@@ -329,7 +333,7 @@ function DeadlineAgenda({ events, openModal }) {
   })}</div>;
 }
 
-function DeadlinesPage({ data, openModal }) {
+function DeadlinesPage({ data, openModal, theme }) {
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const events = useMemo(() => deadlineEvents(data), [data]);
@@ -384,7 +388,7 @@ function DeadlinesPage({ data, openModal }) {
           <label className="search-field soft-inset"><MagnifyingGlass size={21} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search deadlines…" aria-label="Search deadlines" />{query ? <button className="search-clear" type="button" onClick={() => setQuery("")} aria-label="Clear deadline search"><X size={17} /></button> : null}</label>
           <div className="segmented soft-inset" aria-label="Deadline filters"><button className={filter === "all" ? "active" : ""} type="button" onClick={() => setFilter("all")}>All</button><button className={filter === "next-30" ? "active" : ""} type="button" onClick={() => setFilter("next-30")}>Next 30 days</button><button className={filter === "overdue" ? "active" : ""} type="button" onClick={() => setFilter("overdue")}>Overdue</button><button className={filter === "programs" ? "active" : ""} type="button" onClick={() => setFilter("programs")}>Programs</button><button className={filter === "applications" ? "active" : ""} type="button" onClick={() => setFilter("applications")}>Applications</button></div>
         </div>
-        {filteredEvents.length ? <DeadlineAgenda events={filteredEvents} openModal={openModal} /> : <div className="deadline-empty"><EmptyState title={events.length ? "No deadlines match" : "Your datebook is waiting"} description={events.length ? "Try a different search or filter." : "Add a program deadline or start an application to give your datebook something to track."} /></div>}
+        {filteredEvents.length ? <DeadlineAgenda events={filteredEvents} openModal={openModal} /> : events.length ? <div className="deadline-empty"><EmptyState title="No deadlines match" description="Try a different search or filter." /></div> : <FirstUseState className="deadline-first-use" image={emptyCalendar} darkImage={emptyCalendarDark} theme={theme} eyebrow="Make the next date visible" title="Your datebook is waiting." description="Add your first application or task deadline and turn the application season into a clear, manageable runway." primaryLabel="Add application" onPrimary={() => openModal({ type: "add-application" })} secondaryLabel="Add task" onSecondary={() => openModal({ type: "add-task" })} />}
       </section>
     </div>
   );
@@ -577,7 +581,7 @@ function ProgramsPage({ data, openModal, notify, addCatalogProgram, syncCatalog,
   );
 }
 
-function HomePage({ data, openModal, navigate }) {
+function HomePage({ data, openModal, navigate, theme }) {
   const catalogCount = data.catalogPrograms?.length || 0;
   const savedCount = data.programs?.length || 0;
   const documentCount = data.documents?.length || 0;
@@ -604,7 +608,7 @@ function HomePage({ data, openModal, navigate }) {
         </div>
         <div className="home-hero-visual" aria-label="A preview of the connected application workflow">
           <div className="home-hero-badge"><span>START HERE</span><strong>One place for every next step.</strong></div>
-          <div className="home-hero-image-frame"><img src={emptyApplication} alt="Illustration of an organized graduate application workspace" /></div>
+          <div className="home-hero-image-frame"><img className="theme-art" src={theme === "dark" ? emptyApplicationDark : emptyApplication} alt="Illustration of an organized graduate application workspace" /></div>
           <div className="home-hero-float"><CalendarCheck size={23} /><span><small>Keep deadlines visible</small><strong>Your next date</strong></span></div>
         </div>
       </section>
@@ -624,7 +628,7 @@ function HomePage({ data, openModal, navigate }) {
   );
 }
 
-function ApplicationsPage({ data, refresh, notify, openModal, navigate }) {
+function ApplicationsPage({ data, refresh, notify, openModal, navigate, theme }) {
   const [view, setView] = useState("dossier");
   const [query, setQuery] = useState("");
   const joined = data.applications.map((application) => ({ ...application, program: data.programs.find((program) => program.id === application.programId) })).filter((application) => `${application.program?.name} ${application.program?.program} ${application.intake || ""} ${application.referenceNumber || ""} ${application.status}`.toLowerCase().includes(query.toLowerCase()));
@@ -635,8 +639,8 @@ function ApplicationsPage({ data, refresh, notify, openModal, navigate }) {
     notify(`Application moved to ${status}.`);
     } catch { notify("Could not save the status. Please try again."); }
   }
-  if (view === "dossier" && !data.applications.length) return <HomePage data={data} openModal={openModal} navigate={navigate} />;
-  if (view === "dossier") return <ApplicationWorkspace data={data} refresh={refresh} notify={notify} openModal={openModal} navigate={navigate} onOpenTable={() => setView("table")} />;
+  if (view === "dossier" && !data.applications.length) return <HomePage data={data} openModal={openModal} navigate={navigate} theme={theme} />;
+  if (view === "dossier") return <ApplicationWorkspace data={data} refresh={refresh} notify={notify} openModal={openModal} navigate={navigate} theme={theme} onOpenTable={() => setView("table")} />;
   return (
     <div className="page">
       <PageHeader eyebrow="From research to decision" title="My applications" description="Compare every application, then open its dedicated workspace." action={<PrimaryButton onClick={() => openModal({ type: "add-application" })}>Add application</PrimaryButton>} />
@@ -676,13 +680,13 @@ function ApplicationsPage({ data, refresh, notify, openModal, navigate }) {
             </section>
           ))}</div>
         )}
-        {!joined.length ? data.applications.length ? <EmptyState title="No matching applications" description="Try another university, degree, or intake." /> : <FirstUseState className="compact-first-use" image={emptyApplication} eyebrow="Start your application workspace" title="Your application list is ready for its first program." description="Save a program to your shortlist, then turn it into an application when you are ready to track the next step." primaryLabel="Add application" onPrimary={() => openModal({ type: "add-application" })} secondaryLabel="Browse programs" onSecondary={() => navigate("programs")} /> : null}
+        {!joined.length ? data.applications.length ? <EmptyState title="No matching applications" description="Try another university, degree, or intake." /> : <FirstUseState className="compact-first-use" image={emptyApplication} darkImage={emptyApplicationDark} theme={theme} eyebrow="Start your application workspace" title="Your application list is ready for its first program." description="Save a program to your shortlist, then turn it into an application when you are ready to track the next step." primaryLabel="Add application" onPrimary={() => openModal({ type: "add-application" })} secondaryLabel="Browse programs" onSecondary={() => navigate("programs")} /> : null}
       </section>
     </div>
   );
 }
 
-function DocumentsPage({ data, refresh, notify, openModal, navigate }) {
+function DocumentsPage({ data, refresh, notify, openModal, navigate, theme }) {
   const [selectedId, setSelectedId] = useState(data.documents[0]?.id);
   const [query, setQuery] = useState("");
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -704,6 +708,8 @@ function DocumentsPage({ data, refresh, notify, openModal, navigate }) {
       <PageHeader eyebrow="Your application evidence" title="Document vault" description="One academic CV. Every application that needs it. Keep versions and assignments together." localMessage="Stored only on this device" action={<PrimaryButton onClick={() => openModal({ type: "add-document", onSaved: setSelectedId })}>Add document</PrimaryButton>} />
       <FirstUseState
         image={emptyDocuments}
+        darkImage={emptyDocumentsDark}
+        theme={theme}
         eyebrow="Build your evidence kit"
         title="Your document vault is ready."
         description="Upload your CV, transcript, and other files once. Then link them to the programs and applications that need them."
@@ -1239,7 +1245,7 @@ export function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#191821" : "#55C8BD");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#110f1b" : "#55C8BD");
     try { window.localStorage.setItem(THEME_STORAGE_KEY, theme); } catch { /* Theme preference is optional on restricted browsers. */ }
   }, [theme]);
   useEffect(() => { document.title = `Kamiunity — ${NAV_ITEMS.find((item) => item.id === route)?.label || ({ backup: "Backup & transfer", profile: "Profile" }[route] || "Deadlines")}`; }, [route]);
@@ -1295,7 +1301,7 @@ export function App() {
     }
     return programId;
   }
-  const common = { data, refresh, notify: setToast, openModal: setModal, navigate, addCatalogProgram, syncCatalog: syncProgramCatalog, importCatalog: importProgramCatalog, resetCatalog: resetProgramCatalog };
+  const common = { data, refresh, notify: setToast, openModal: setModal, navigate, theme, addCatalogProgram, syncCatalog: syncProgramCatalog, importCatalog: importProgramCatalog, resetCatalog: resetProgramCatalog };
   const pages = { deadlines: <DeadlinesPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, services: <ServicesPage {...common} />, profile: <ProfilePage {...common} locked={!profileUnlocked} installPrompt={installPrompt} installApp={installApp} installed={appInstalled} />, documents: <DocumentsPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} installed={appInstalled} /> };
   const visibleRoute = profileUnlocked ? route : "profile";
   if (!ready) return <main className="loading-screen"><img className="loading-brand" src={kamiunityLogo} alt="kamiunity" /><strong>{loadError ? "Your workspace could not open" : "Opening your application workspace…"}</strong><span role={loadError ? "alert" : undefined}>{loadError || "Your records stay on this device."}</span>{loadError ? <button className="secondary-button soft-button" type="button" onClick={() => window.location.reload()}>Try again</button> : null}</main>;

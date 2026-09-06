@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowRight, ArrowSquareOut, CalendarBlank, CaretRight, Check, CheckCircle, Circle, Clock, EnvelopeSimple, FilePdf, FileText, ListChecks, MagnifyingGlass, NotePencil, Plus, Sparkle, Trash, WarningCircle } from "@phosphor-icons/react";
 import { db, toIsoDate } from "./db.js";
 import emptyApplication from "./assets/empty-application.png";
+import emptyApplicationDark from "./assets/empty-application-dark.png";
 import { applicationChecklist, documentReadiness, removeApplication, saveApplicationChecklist } from "./workflow.js";
 import { downloadBlob } from "./backup.js";
 import { ExternalLink } from "./WorkflowForms.jsx";
@@ -24,7 +25,7 @@ export function ReadinessBadge({ status }) {
   return <span className={`readiness-badge ${ready ? "ready" : missing ? "needed" : status === "Example" ? "example" : "draft"}`}><Icon size={17} />{status}</span>;
 }
 
-export function ApplicationWorkspace({ data, openModal, refresh, notify, navigate, onOpenTable }) {
+export function ApplicationWorkspace({ data, openModal, refresh, notify, navigate, theme = "light", onOpenTable }) {
   const [selectedId, setSelectedId] = useState(data.applications[0]?.id);
   const [query, setQuery] = useState("");
   const [savingStage, setSavingStage] = useState(false);
@@ -95,7 +96,7 @@ export function ApplicationWorkspace({ data, openModal, refresh, notify, navigat
         </div>
       </section>
     </article> : <div className={`dossier-no-selection ${!data.applications.length ? "dossier-first-use" : ""}`}>
-      {!data.applications.length ? <img className="first-use-art" src={emptyApplication} alt="" /> : <FileText size={42} />}
+      {!data.applications.length ? <img className="first-use-art" src={theme === "dark" ? emptyApplicationDark : emptyApplication} alt="" /> : <FileText size={42} />}
       {!data.applications.length ? <span className="eyebrow">Start your application workspace</span> : null}
       <h2>{query ? "No matching application" : !data.applications.length ? "Start with a program from your shortlist." : "Your next chapter starts with a program."}</h2>
       <p>{query ? "Try another university, degree, or intake." : !data.applications.length ? "Choose a saved program and bring its deadlines, contacts, and documents into one application." : "Choose a saved program and bring its deadlines, contacts, and documents into one application."}</p>
