@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, ArrowSquareOut, CalendarBlank, CaretRight, Check, CheckCircle, Circle, Clock, EnvelopeSimple, FilePdf, FileText, ListChecks, MagnifyingGlass, NotePencil, Plus, Sparkle, Trash, WarningCircle } from "@phosphor-icons/react";
 import { db, toIsoDate } from "./db.js";
-import { applicationChecklist, documentReadiness, saveApplicationChecklist } from "./workflow.js";
+import emptyApplication from "./assets/empty-application.png";
+import { applicationChecklist, documentReadiness, removeApplication, saveApplicationChecklist } from "./workflow.js";
 import { downloadBlob } from "./backup.js";
 import { ExternalLink } from "./WorkflowForms.jsx";
 import { Modal, PrimaryButton } from "./ui.jsx";
@@ -27,6 +28,8 @@ export function ApplicationWorkspace({ data, openModal, refresh, notify, navigat
   const [selectedId, setSelectedId] = useState(data.applications[0]?.id);
   const [query, setQuery] = useState("");
   const [savingStage, setSavingStage] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const applications = useMemo(() => data.applications.map((application) => ({ application, program: data.programs.find((program) => program.id === application.programId) })), [data]);
   const visible = applications.filter(({ application, program }) => `${program?.name} ${program?.program} ${application.intake || ""}`.toLowerCase().includes(query.toLowerCase()));
   const selected = visible.find(({ application }) => application.id === selectedId) || visible[0];
@@ -44,8 +47,20 @@ export function ApplicationWorkspace({ data, openModal, refresh, notify, navigat
     catch { notify("Could not update the stage. Please try again."); }
     finally { setSavingStage(false); }
   }
+  async function deleteApplication() {
+    if (!application || removing) return;
+    setRemoving(true);
+    try {
+      await removeApplication(application.id);
+      setSelectedId(undefined);
+      setConfirmRemove(false);
+      await refresh();
+      notify("Application removed. Its saved program, tasks, and documents are still here.");
+    } catch { notify("Could not remove the application. Please try again."); }
+    finally { setRemoving(false); }
+  }
   function edit(section) { openModal({ type: "application", application, focusSection: section }); }
-  return <div className="application-workspace">
+  return <div className={`application-workspace ${!data.applications.length ? "application-workspace-empty" : ""}`}>
     <aside className="application-index" aria-label="Your applications">
       <div className="index-heading"><div><h1>My applications</h1><p>{application?.intake || "Your admissions cycle"}</p></div><button className="icon-button soft-button" type="button" onClick={() => openModal({ type: "add-application" })} aria-label="Add application"><Plus size={22} /></button></div>
       <label className="index-search"><MagnifyingGlass size={17} /><input type="search" placeholder="Find an application" aria-label="Find an application" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
@@ -55,7 +70,8 @@ export function ApplicationWorkspace({ data, openModal, refresh, notify, navigat
       <div className="index-footer"><button type="button" onClick={() => navigate("today")}><ListChecks size={21} />Today’s next steps<ArrowRight size={18} /></button><button type="button" onClick={onOpenTable}>Open table & board<ArrowSquareOut size={17} /></button><button type="button" onClick={() => navigate("backup")}>Backup & transfer<ArrowRight size={17} /></button></div>
     </aside>
     {application ? <article className="application-dossier">
-      <div className="dossier-breadcrumb"><span>Applications<span aria-hidden="true">/</span>{program?.name || "Application"}</span><button className="text-action" type="button" onClick={() => edit("tracking")}><NotePencil size={17} />Edit details</button></div>
+      <div className="dossier-breadcrumb"><span>Applications<span aria-hidden="true">/</span>{program?.name || "Application"}</span><div className="dossier-header-actions"><button className="text-action" type="button" onClick={() => edit("tracking")}><NotePencil size={17} />Edit details</button><button className="text-action danger-text-action" type="button" onClick={() => setConfirmRemove(true)}><Trash size={17} />Remove application</button></div></div>
+      {confirmRemove ? <div className="form-notice application-remove-notice" role="alert"><p>Remove this application from your workspace? Its saved program, tasks, and documents will stay available.</p><div className="button-row application-remove-actions"><button type="button" className="danger-button soft-button" disabled={removing} onClick={deleteApplication}>{removing ? "Removing…" : "Remove application"}</button><button type="button" className="secondary-button" disabled={removing} onClick={() => setConfirmRemove(false)}>Keep application</button></div></div> : null}
       <header className="dossier-header"><div><h2>{program?.name || "Your application"}</h2><p>{program?.program}{application.intake ? ` · ${application.intake}` : ""}</p><div className="dossier-links"><ExternalLink url={program?.url}>Program website</ExternalLink><ExternalLink url={application.portalUrl || program?.portalUrl}>Application portal</ExternalLink>{!program?.url && !application.portalUrl && !program?.portalUrl ? <button className="text-action" type="button" onClick={() => edit("tracking")}>Add application details</button> : null}</div></div>
         <button className="dossier-deadline" type="button" onClick={() => edit("tracking")}><CalendarBlank size={29} /><span><strong>{fullDate(application.deadline)}</strong><small>{deadlineCopy(application.deadline)}</small></span></button>
       </header>
@@ -78,7 +94,13 @@ export function ApplicationWorkspace({ data, openModal, refresh, notify, navigat
           <PrimaryButton onClick={() => openModal({ type: "add-task", applicationId: application.id })}>Add task</PrimaryButton>
         </div>
       </section>
-    </article> : <div className="dossier-no-selection"><FileText size={42} /><h2>{query ? "No matching application" : "Your next chapter starts with a program."}</h2><p>{query ? "Try another university, degree, or intake." : "Choose a saved program and bring its deadlines, contacts, and documents into one application."}</p><PrimaryButton onClick={() => openModal({ type: "add-application" })}>Add application</PrimaryButton></div>}
+    </article> : <div className={`dossier-no-selection ${!data.applications.length ? "dossier-first-use" : ""}`}>
+      {!data.applications.length ? <img className="first-use-art" src={emptyApplication} alt="" /> : <FileText size={42} />}
+      {!data.applications.length ? <span className="eyebrow">Start your application workspace</span> : null}
+      <h2>{query ? "No matching application" : !data.applications.length ? "Start with a program from your shortlist." : "Your next chapter starts with a program."}</h2>
+      <p>{query ? "Try another university, degree, or intake." : !data.applications.length ? "Choose a saved program and bring its deadlines, contacts, and documents into one application." : "Choose a saved program and bring its deadlines, contacts, and documents into one application."}</p>
+      <div className="first-use-actions"><PrimaryButton onClick={() => openModal({ type: "add-application" })}>Add application</PrimaryButton>{!data.applications.length ? <button className="secondary-button soft-button" type="button" onClick={() => navigate("programs")}>Browse programs</button> : null}</div>
+    </div>}
   </div>;
 }
 

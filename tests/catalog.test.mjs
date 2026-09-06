@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { after, beforeEach, test } from "node:test";
 import { db } from "../src/db.js";
 import { googleSheetCsvUrl, importCatalogCsv, parseCatalogCsv, programKey } from "../src/catalog.js";
+import { normalizeIntake } from "../src/program-taxonomy.js";
 
 beforeEach(async () => { await db.delete(); await db.open(); });
 after(async () => { await db.delete(); });
@@ -44,4 +45,11 @@ test("importing catalog CSV replaces the shared snapshot without creating applic
   const source = await db.settings.get("program-catalog-source");
   assert.equal(source.value.label, "program-list.csv");
   assert.equal(source.value.mode, "file");
+});
+
+test("catalog intake values become season-only and blank categories are inferred", () => {
+  assert.equal(normalizeIntake("Winter semester, Summer semester 2028"), "Summer, Winter");
+  const parsed = parseCatalogCsv("University,Program,Intake,Department\nExample University,MSc Computer Science,2025/2026,Computer Science");
+  assert.equal(parsed.records[0].intake, "Fall");
+  assert.equal(parsed.records[0].category, "Computer Science & Data");
 });

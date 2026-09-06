@@ -4,7 +4,7 @@ import { after, beforeEach, test } from "node:test";
 import Dexie from "dexie";
 import * as XLSX from "xlsx";
 import { db, readAllData, seedDatabase } from "../src/db.js";
-import { applicationChecklist, applicationDocuments, applicationFromProgram, cleanProgram, deadlineEvents, documentReadiness, programDocuments, safeUrl, saveApplication, saveApplicationChecklist, saveDocument, saveProgram, saveTask } from "../src/workflow.js";
+import { applicationChecklist, applicationDocuments, applicationFromProgram, cleanProgram, deadlineEvents, documentReadiness, programDocuments, removeApplication, safeUrl, saveApplication, saveApplicationChecklist, saveDocument, saveProgram, saveTask } from "../src/workflow.js";
 import { buildWorkbook, createEncryptedBackup, importWorkbook, readEncryptedBackup, restoreBackup } from "../src/backup.js";
 
 beforeEach(async () => { await db.delete(); await db.open(); });
@@ -40,14 +40,30 @@ test("version 1 migration maps program links to application IDs and keeps intent
   assert.deepEqual((await db.tasks.get(1)).applicationIds, [99]);
 });
 
-test("concurrent initialization creates one starter workspace and preserves existing records", async () => {
+test("concurrent initialization creates an empty personal workspace and starter catalogue", async () => {
   await Promise.all([seedDatabase(), seedDatabase()]);
-  assert.equal(await db.programs.count(), 4);
-  assert.equal(await db.applications.count(), 4);
-  assert.deepEqual((await db.documents.get(1)).linkedApplicationIds, [1, 2, 3]);
-  await db.programs.update(1, { notes: "My edits" });
+  assert.equal(await db.programs.count(), 0);
+  assert.equal(await db.applications.count(), 0);
+  assert.equal(await db.tasks.count(), 0);
+  assert.equal(await db.documents.count(), 0);
+  assert.ok(await db.catalogPrograms.count());
+  await db.programs.add({ id: 1, name: "My university", program: "MSc", notes: "My edits" });
   await seedDatabase();
   assert.equal((await db.programs.get(1)).notes, "My edits");
+});
+
+test("removing an application unlinks its tasks and documents but keeps the saved program", async () => {
+  await fixture();
+  await saveTask({ title: "Shared task", dueDate: "2027-01-10", priority: "High", done: false, note: "", url: "", applicationIds: [99, 100], programIds: [] });
+  const task = (await db.tasks.toArray()).find((item) => item.title === "Shared task");
+  await removeApplication(99);
+  assert.equal(await db.applications.get(99), undefined);
+  assert.ok(await db.programs.get(10));
+  assert.deepEqual((await db.documents.get(7)).linkedApplicationIds, [100]);
+  assert.deepEqual((await db.documents.get(8)).linkedApplicationIds, []);
+  assert.deepEqual((await db.tasks.get(task.id)).applicationIds, [100]);
+  assert.equal((await db.tasks.get(task.id)).applicationId, 100);
+  assert.deepEqual((await db.tasks.get(task.id)).programIds, [20]);
 });
 
 test("starting from a saved program copies details and multiple documents without duplicating the program", async () => {
@@ -190,7 +206,7 @@ test("CSV import reads professor details and does not invent unknown deadlines",
   assert.equal(data.programs[0].deadline, "");
   assert.equal(data.programs[0].url, "https://example.edu/design");
   assert.equal(data.applications[0].professors[0].email, "contact@example.edu");
-  assert.equal(data.applications[0].intake, "Fall 2027");
+  assert.equal(data.applications[0].intake, "Fall");
 });
 
 test("deadline summaries use application-specific dates and omit unscheduled records", async () => {

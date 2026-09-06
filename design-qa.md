@@ -1,46 +1,68 @@
-# Apply 2027 design QA
+# Design QA
 
-## Comparison setup
+source visual truth paths:
 
-- Source reference: `design/reference-deadline-compass.png`
-- Implementation capture: `design/implementation-today-final.jpg`
-- Reference dimensions: 1487 × 1058 px
-- Browser viewport: 1487 × 1058 CSS px at device pixel ratio 1
-- State: seeded local data, Today route, no modal or toast open
-- Visual density: desktop, comfortable application-planning workspace
+- `C:/Users/Asus/AppData/Local/Temp/codex-clipboard-065d7e60-535e-43e0-af39-f0a30439c99f.png` — clipped program metadata reference, 167 x 94 pixels.
+- `C:/Users/Asus/AppData/Local/Temp/codex-clipboard-a6b7bb9b-df7e-4f9d-bb4e-180cd794f8c9.png` — mobile application form/footer reference, 488 x 459 pixels.
+- `C:/Users/Asus/AppData/Local/Temp/codex-clipboard-4e6bb924-a743-4f80-a1dc-dae5ce97fd0d.png` — palette reference, 275 x 209 pixels; swatches are `#E9B9AA`, `#D94841`, `#7892B5`, `#8CB9C0`, `#91B5A9`, and `#EDCA7F`.
 
-The source and implementation were inspected together in the same comparison input at matching dimensions. Additional layout checks were made at 768 × 1024 and 390 × 844.
+implementation screenshot path: Live CUA browser captures from `http://127.0.0.1:5175/applications#/programs`, `http://127.0.0.1:5175/applications#/applications`, `http://127.0.0.1:5175/applications#/today`, and `http://127.0.0.1:5175/applications#/backup` (the browser screenshot API returned the captures in-session and does not persist a local image path).
 
-## Findings and fixes
+viewport: 434 x 696 CSS pixels, mobile in-app browser, device scale factor 1. Browser chrome was excluded. Source crops were compared at their native pixel dimensions against the corresponding live implementation regions; no density conversion was needed.
 
-### Pass 1
+state: Populated local Kamiunity workspace. Verified the mobile Programs card at a narrow viewport, the Application form scrolled through its deadline field and to its footer, the combined Today & deadlines page at its top and agenda sections, the five-item mobile navigation, the Add document modal, and the active Backup & transfer utility.
 
-- **P1 · Layout/navigation:** The initial implementation used stacked nav icons and a compact center group, while the source used a wide raised navigation tray with horizontal icon-label pairs. Fixed in `src/styles.css` by matching tray width, placement, item direction, active elevation, and underline.
-- **P1 · Layout/scale:** The initial page gutters, title scale, timeline width, timeline card height, and vertical rhythm were too compact. Fixed by matching the 45 px desktop gutters, larger date heading, 630 px timeline panel, 170 px next-action card, and source-like row spacing.
-- **P2 · Shapes/states:** Timeline nodes and due-state treatments lacked the source's raised circular markers and soft status wells. Fixed with restrained neumorphic node elevation plus neutral, urgent, and complete wells.
-- **P2 · Content/alignment:** The deadline band used a narrow label column, left-aligned dates, and omitted the year on the cross-year deadline. Fixed with the source-like label width, centered deadline cells, and conditional year formatting.
+## Full-view comparison evidence
 
-### Pass 2
+- The implementation uses the requested icon-only five-slot footer in the exact order Applications, Programs, Add document, Today & deadlines, and Document vault. The center Add document control is raised above the glass surface, matching the structural intent of the reference navigation.
+- Backup & transfer is available as a separate upper-right icon on mobile and remains visible while scrolling. The desktop shell remains a separate labeled header.
+- Today and Deadlines are now one route and one page. The top task timeline is followed by a full Tasks & deadlines agenda, so the user can see the next action and the wider schedule without changing sections.
+- The implementation uses translucent glass cards, blur, soft elevation, and the six supplied palette colors as named CSS tokens. The source reference is a compact mobile navigation crop rather than a full application screen, so the surrounding page composition is an intentional product extension.
 
-- **P2 · Spacing:** Desktop task copy and due wells drifted horizontally from the source. Fixed by adjusting the task-row inset and the gap before the trailing chevron while keeping the timeline rail anchored.
-- **P2 · Responsiveness:** The mobile navigation tray increased document width by 18 px. Fixed with edge-to-edge negative margins inside the padded header; all six routes now report no horizontal overflow at 390 px.
-- **P2 · Responsive readability:** Tablet due wells left too little room for long task names. Fixed with narrower responsive wells and row spacing; mobile collapses the well to an icon-only state.
+## Focused region comparison evidence
 
-## Functional and accessibility verification
+- Program metadata crop: the location, degree/intake, category, and QS rank now use a narrow two-column metadata grid with wrapping and truncation safeguards; the category pill no longer forces the row to clip.
+- Application form crop: the mobile workflow footer is static within the modal scroll area. The Application deadline field remains visible in sequence, and the Create application / Cancel controls appear after the content instead of overlaying it.
+- Navigation crop: the live footer was checked for five slots, central action elevation, spacing, icon-only presentation, color accents, focusable controls, and the separate upper-right Backup icon.
+- Palette crop: the implementation token set was checked against all six supplied hex values; the live footer and Backup state visibly use the blue, sage, light teal, amber, red, and peach families.
 
-- All six top-level destinations render and navigate through hash routes.
-- Program and task modals open, accept input, and close by button or Escape without unintended data changes.
-- Application table and board views switch correctly.
-- Document metadata/detail states render from IndexedDB.
-- Backup passphrase validation, encrypted backup download, and Excel export return success feedback.
-- The service worker was verified by stopping the local server and successfully reloading the complete app offline.
-- The production build precaches the app shell, fonts, icon assets, main bundle, styles, and lazy Excel bundle under a content-derived cache version.
-- Semantic headings, labeled form fields, visible keyboard focus, reduced-motion support, status announcements, and practical touch targets are present.
-- Viewport checks at 1487, 768, and 390 px found no horizontal document overflow or clipped core controls.
-- Browser console review found no errors or warnings during the verified flows.
+## Required fidelity surfaces
 
-## Final assessment
+- Fonts and typography: Manrope Variable remains the app font. The mobile navigation intentionally hides visible labels while preserving accessible names and title tooltips; page headings, metadata, and small labels retain the established hierarchy and wrap safely at the tested width.
+- Spacing and layout rhythm: the footer uses five equal slots, a raised center control, safe-area-aware bottom positioning, and page bottom clearance. The combined schedule has a consistent heading, summary card, agenda rhythm, and mobile padding. The modal footer no longer participates in sticky overlay positioning on mobile.
+- Colors and visual tokens: the palette tokens in `src/kamiunity.css` map to the supplied peach, red, blue, light teal, sage, and amber values, with darker derived text/action colors where contrast requires it. Glass surfaces keep visible borders, focus rings, and non-color state cues.
+- Image quality and asset fidelity: the existing custom Kamiunity logo and generated empty-state art remain intact. Navigation continues to use the existing Phosphor icon system; no placeholder image or CSS-drawn visual replaced a referenced asset.
+- Copy and content: mobile accessibility labels match the requested destinations, the center action says Add document, Backup & transfer is explicit, and the merged page is titled Today & deadlines. The old mobile More destination was intentionally removed to honor the explicit five-item order.
 
-No open P0, P1, or P2 findings remain. Minor antialiasing differences in the browser capture do not change hierarchy, spacing, or usability.
+## Findings
+
+No actionable P0, P1, or P2 findings remain after the revised comparison.
+
+## Comparison history
+
+- Initial comparison: the narrow program metadata row could clip its category/intake content (P2), and the mobile workflow footer could cover the Application deadline field while scrolling (P1). The shell also used a palette that did not match the supplied swatches (P2).
+- Fixes made: changed mobile metadata to a resilient grid with bounded text, removed mobile sticky workflow-footer positioning, replaced the mobile More bar with the requested five destinations, added the upper-right Backup utility, combined Today and Deadlines, and replaced the shell palette tokens with the six supplied colors while preserving accessible derived action colors.
+- Post-fix comparison: live captures at the same 434 x 696 viewport show the program card wrapping cleanly, the application footer after the form content, the exact five-item nav order, the visible Backup icon, and the merged agenda. No new P0/P1/P2 issue was observed.
+
+## Open Questions
+
+- The attached references are focused mobile crops, not a full desktop composition. Desktop navigation was therefore reviewed for responsive behavior and separation from the mobile shell rather than pixel-matched to the crops.
+- The in-app browser capture API did not persist screenshot bytes to the workspace; live captures and accessibility snapshots were available for this QA pass.
+
+## Implementation Checklist
+
+- [x] Mobile footer order is Applications, Programs, Add document, Today & deadlines, Document vault.
+- [x] Mobile footer is icon-only with a raised central Add document action.
+- [x] Backup & transfer is an upper-right mobile icon and remains accessible while scrolling.
+- [x] Today and Deadlines are combined into one agenda page with task and deadline interactions.
+- [x] Program metadata wraps safely on narrow cards.
+- [x] Mobile application workflow footer no longer overlays form fields.
+- [x] Supplied six-color palette is represented in CSS tokens and responsive shell accents.
+- [x] Browser console has no errors or warnings in the verified states.
+- [x] Workflow tests, catalog tests, Sites tests, production build, and `git diff --check` pass.
+
+## Follow-up Polish
+
+- Consider a small first-run tooltip for the icon-only mobile destinations if usability testing shows that the route icons need additional discoverability.
 
 final result: passed

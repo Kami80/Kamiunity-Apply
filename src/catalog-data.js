@@ -1,3 +1,5 @@
+import { POLIMI_CATALOG } from "./polimi-data.js";
+
 export const CATALOG_SOURCE_SETTING_KEY = "program-catalog-source";
 export const CATALOG_AUTO_SYNC_SETTING_KEY = "program-catalog-auto-sync-v1";
 
@@ -5,7 +7,7 @@ export const CATALOG_AUTO_SYNC_SETTING_KEY = "program-catalog-auto-sync-v1";
 // Keep the starter catalogue as the offline fallback when this feed is unavailable.
 export const SHARED_CATALOG_SOURCE = {
   label: "Kamiunity program database",
-  inputUrl: "https://docs.google.com/spreadsheets/d/1vu_kdUPWucy6F7lUvieuTA5MHct18aj-eha8FYTDK_s/edit?gid=48979760#gid=48979760",
+  inputUrl: "https://docs.google.com/spreadsheets/d/1vu_kdUPWucy6F7lUvieuTA5MHct18aj-eha8FYTDK_s/edit?gid=1455377108#gid=1455377108",
 };
 
 export const DEFAULT_CATALOG_SOURCE = {
@@ -13,14 +15,14 @@ export const DEFAULT_CATALOG_SOURCE = {
   label: "Kamiunity starter catalog",
   inputUrl: "",
   url: "",
-  rowCount: 8,
+  rowCount: 53,
   skippedRows: 0,
   lastSyncedAt: null,
 };
 
 // These are intentionally starter records, not a current admissions feed.
 // Students should verify deadlines, fees, and requirements against the official source.
-export const STARTER_CATALOG = [
+const STARTER_CATALOG_EXAMPLES = [
   {
     catalogId: "starter-utoronto-msc-computer-science",
     name: "University of Toronto",
@@ -29,7 +31,8 @@ export const STARTER_CATALOG = [
     city: "Toronto",
     department: "Computer Science",
     degreeLevel: "Master’s",
-    intake: "Fall 2027",
+    intake: "Fall",
+    category: "Computer Science & Data",
     duration: "2 years",
     language: "English",
     studyMode: "On campus",
@@ -60,7 +63,8 @@ export const STARTER_CATALOG = [
     city: "Munich",
     department: "Computer Science",
     degreeLevel: "Master’s",
-    intake: "Fall 2027",
+    intake: "Fall",
+    category: "Computer Science & Data",
     duration: "2 years",
     language: "English",
     studyMode: "On campus",
@@ -91,7 +95,8 @@ export const STARTER_CATALOG = [
     city: "Leuven",
     department: "Computer Science",
     degreeLevel: "Master’s",
-    intake: "Fall 2027",
+    intake: "Fall",
+    category: "Computer Science & Data",
     duration: "2 years",
     language: "English",
     studyMode: "On campus",
@@ -122,7 +127,8 @@ export const STARTER_CATALOG = [
     city: "Amsterdam",
     department: "Informatics Institute",
     degreeLevel: "Master’s",
-    intake: "Fall 2027",
+    intake: "Fall",
+    category: "Computer Science & Data",
     duration: "2 years",
     language: "English",
     studyMode: "On campus",
@@ -153,7 +159,8 @@ export const STARTER_CATALOG = [
     city: "Edinburgh",
     department: "School of Informatics",
     degreeLevel: "Master’s",
-    intake: "Fall 2027",
+    intake: "Fall",
+    category: "Computer Science & Data",
     duration: "1 year",
     language: "English",
     studyMode: "On campus",
@@ -184,7 +191,8 @@ export const STARTER_CATALOG = [
     city: "Vancouver",
     department: "Computer Science",
     degreeLevel: "Master’s",
-    intake: "Fall 2027",
+    intake: "Fall",
+    category: "Computer Science & Data",
     duration: "2 years",
     language: "English",
     studyMode: "On campus",
@@ -215,7 +223,8 @@ export const STARTER_CATALOG = [
     city: "Zurich",
     department: "Computer Science",
     degreeLevel: "Master’s",
-    intake: "Fall 2027",
+    intake: "Fall",
+    category: "Computer Science & Data",
     duration: "2 years",
     language: "English",
     studyMode: "On campus",
@@ -246,7 +255,8 @@ export const STARTER_CATALOG = [
     city: "Helsinki",
     department: "Computer Science",
     degreeLevel: "Master’s",
-    intake: "Fall 2027",
+    intake: "Fall",
+    category: "Computer Science & Data",
     duration: "2 years",
     language: "English",
     studyMode: "On campus",
@@ -270,3 +280,5 @@ export const STARTER_CATALOG = [
     catalogLastVerified: "Example record — verify",
   },
 ];
+
+export const STARTER_CATALOG = [...STARTER_CATALOG_EXAMPLES, ...POLIMI_CATALOG];

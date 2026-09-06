@@ -1,0 +1,62 @@
+{
+  "generatedAt": "2026-09-06T00:58:30.230Z",
+  "verifiedDate": "2026-09-06",
+  "qsSourceUrl": "https://www.topuniversities.com/world-university-rankings",
+  "sourceUrls": {
+    "Italy": "https://www2.almalaurea.it/cgi-asp/lau/corsi/risultati.aspx?lang=it&tipologie=LS&tipobacheca=2&anni=2025&from=cerca",
+    "Germany": "https://www.daad.de/en/studying-in-germany/universities/all-degree-programmes/",
+    "France": "https://data.enseignementsup-recherche.gouv.fr/explore/dataset/fr-esr-tmm-donnees-du-portail-dinformation-trouver-mon-master-parcours-de-format/",
+    "Netherlands": "https://duo.nl/zakelijk/hoger-onderwijs/studentenadministratie/opleidingsgegevens-in-croho/raadplegen-en-downloaden.jsp",
+    "Belgium": "https://www.studyinflanders.be/programmes"
+  },
+  "rowCount": 8037,
+  "universityCount": 85,
+  "countryCount": 5,
+  "countsBySource": {
+    "AlmaLaurea": 1120,
+    "DAAD": 798,
+    "DUO": 1423,
+    "Study in Flanders": 491,
+    "Trouver Mon Master": 4565
+  },
+  "countsByCountry": {
+    "Belgium": 241,
+    "France": 4455,
+    "Germany": 798,
+    "Italy": 1120,
+    "Netherlands": 1423
+  },
+  "universitiesByCountry": {
+    "Belgium": 5,
+    "France": 15,
+    "Germany": 35,
+    "Italy": 18,
+    "Netherlands": 12
+  },
+  "skippedBySource": {
+    "Italy": {
+      "University outside QS<1000 Italy set": 1296
+    },
+    "Germany": {
+      "Academy outside QS<1000 Germany set": 948
+    },
+    "France": {
+      "Institution outside QS<1000 France set": 19546
+    },
+    "Netherlands": {
+      "Institution outside QS<1000 Netherlands set": 145
+    },
+    "Belgium": {
+      "Institution outside QS<1000 Belgium set": 231
+    },
+    "Trouver Mon Master": {
+      "Duplicate programme identity": 110
+    },
+    "Study in Flanders": {
+      "Duplicate programme identity": 250
+    }
+  },
+  "qsRankingsContain2026": false,
+  "outputCsv": "E:/PROJECTS/web-app-2026/Apply-2027/outputs/european-master-programs-20260906/european-master-programs.csv",
+  "outputXlsx": "E:/PROJECTS/web-app-2026/Apply-2027/outputs/european-master-programs-20260906/european-master-programs.xlsx"
+}

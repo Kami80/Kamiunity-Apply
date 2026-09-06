@@ -1,9 +1,10 @@
 import { db, toIsoDate } from "./db.js";
+import { inferProgramCategory, normalizeIntake } from "./program-taxonomy.js";
 
 export const STATUS_OPTIONS = ["Researching", "Preparing", "Submitted", "Offer", "Decision"];
 export const PRIORITIES = ["Low", "Medium", "High"];
 export const DOCUMENT_CATEGORIES = ["Academic", "Essays", "Identity", "Recommendations", "Test scores", "Financial", "Other"];
-export const PROGRAM_TEXT_FIELDS = ["name", "program", "country", "city", "department", "degreeLevel", "intake", "duration", "language", "studyMode", "deadline", "deadlineNote", "priority", "url", "portalUrl", "admissionsEmail", "tuition", "applicationFee", "funding", "fundingUrl", "requirements", "languageRequirements", "minimumGpa", "notes", "catalogId", "catalogSource", "catalogSourceUrl", "catalogLastVerified"];
+export const PROGRAM_TEXT_FIELDS = ["name", "program", "country", "city", "department", "category", "degreeLevel", "intake", "duration", "language", "studyMode", "qsRanking", "deadline", "deadlineNote", "priority", "url", "portalUrl", "admissionsEmail", "tuition", "applicationFee", "funding", "fundingUrl", "requirements", "languageRequirements", "minimumGpa", "notes", "catalogId", "catalogSource", "catalogSourceUrl", "catalogLastVerified"];
 export const APPLICATION_TEXT_FIELDS = ["deadline", "deadlineNote", "intake", "priority", "portalUrl", "applicationFee", "funding", "requirements", "admissionsEmail", "status", "referenceNumber", "feeStatus", "submittedAt", "decisionDate", "decision", "notes"];
 
 export function ids(values = []) {
@@ -57,6 +58,8 @@ export function cleanProfessors(professors = []) {
 export function cleanProgram(record) {
   const result = textFields(record, PROGRAM_TEXT_FIELDS);
   if (!result.name || !result.program) throw new Error("Add both a university and a program name.");
+  result.intake = normalizeIntake(result.intake);
+  result.category = result.category || inferProgramCategory(result);
   for (const key of ["url", "portalUrl", "fundingUrl"]) result[key] = validateUrl(result[key], "Website");
   result.admissionsEmail = validateEmail(result.admissionsEmail);
   result.deadline = validateDate(result.deadline, "Deadline");
@@ -115,6 +118,7 @@ export async function saveProgram(record, documentIds) {
 
 export async function saveApplication(record, documentIds, newProgram) {
   const values = textFields(record, APPLICATION_TEXT_FIELDS);
+  values.intake = normalizeIntake(values.intake);
   values.portalUrl = validateUrl(values.portalUrl, "Application portal");
   values.admissionsEmail = validateEmail(values.admissionsEmail);
   values.professors = cleanProfessors(record.professors);
@@ -133,6 +137,43 @@ export async function saveApplication(record, documentIds, newProgram) {
     if (record.id) await db.applications.update(id, { ...values, programId });
     await updateDocumentLinks("linkedApplicationIds", id, documentIds);
     if (programValues) await updateDocumentLinks("linkedProgramIds", programId, documentIds);
+    return id;
+  });
+}
+
+export async function removeApplication(applicationId) {
+  const id = Number(applicationId);
+  if (!Number.isSafeInteger(id) || id < 1) throw new Error("Choose an application to remove.");
+  return db.transaction("rw", db.applications, db.tasks, db.documents, async () => {
+    const application = await db.applications.get(id);
+    if (!application) throw new Error("The application could not be found.");
+    const applications = await db.applications.toArray();
+    const programByApplication = new Map(applications.map((item) => [item.id, item.programId]));
+
+    await db.tasks.toCollection().modify((task) => {
+      const linkedApplicationIds = ids(task.applicationIds ?? (task.applicationId ? [task.applicationId] : []));
+      if (!linkedApplicationIds.includes(id)) return;
+      const remainingApplicationIds = linkedApplicationIds.filter((value) => value !== id);
+      const additionalProgramIds = Array.isArray(task.additionalProgramIds)
+        ? task.additionalProgramIds
+        : (task.programIds || []).filter((value) => Number(value) !== Number(application.programId));
+      task.applicationIds = remainingApplicationIds;
+      task.applicationId = remainingApplicationIds[0] ?? null;
+      task.additionalProgramIds = ids(additionalProgramIds);
+      task.programIds = ids([
+        ...additionalProgramIds,
+        ...remainingApplicationIds.map((applicationKey) => programByApplication.get(applicationKey)),
+      ]);
+    });
+
+    await db.documents.toCollection().modify((document) => {
+      const linkedApplicationIds = document.linkedApplicationIds ?? applications
+        .filter((item) => document.linkedProgramIds?.includes(item.programId))
+        .map((item) => item.id);
+      document.linkedApplicationIds = ids(linkedApplicationIds).filter((value) => value !== id);
+    });
+
+    await db.applications.delete(id);
     return id;
   });
 }

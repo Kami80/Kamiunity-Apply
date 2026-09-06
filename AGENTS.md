@@ -25,3 +25,10 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Proceed with the second generated screen, `design/kamiunity/application-dossier.png`, as the main application workspace after the user's instruction to continue. Extend its brand and typography across the existing routes.
 - Use the generated logo at `design/kamiunity/kamiunity-logo.png`. In product copy, distinguish local device storage from encrypted backup files; do not repeat the mockup's inaccurate claim that all local storage is encrypted.
 - Keep an explicit Add task action in task areas, including application task panels with no upcoming tasks and the Deadlines page. Creating a task from an application should preselect that application.
+
+## Navigation and visual preference
+
+- Use distinct navigation shells for desktop and mobile: a full desktop header and a five-item mobile bottom bar.
+- The mobile bar is icon-only and ordered left-to-right as Applications, Programs, Add document, Today & deadlines, and Document vault; keep a raised central Add document action.
+- Keep Backup & transfer as an icon-only utility in the upper-right of the mobile shell, and combine Today and Deadlines into one clearer workspace.
+- Use the attached palette as the visual source for the shell: peach `#E9B9AA`, red `#D94841`, blue `#7892B5`, light teal `#8CB9C0`, sage `#91B5A9`, and amber `#EDCA7F`, with liquid-glass surfaces and high-contrast text.

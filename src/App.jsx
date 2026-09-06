@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArrowRight,
+  CaretLeft,
   CalendarBlank,
   CalendarCheck,
   CaretRight,
@@ -10,6 +11,7 @@ import {
   Clock,
   Database,
   DownloadSimple,
+  FilePlus,
   FileText,
   FileXls,
   FolderSimple,
@@ -18,20 +20,26 @@ import {
   HardDrive,
   Kanban,
   MagnifyingGlass,
+  Plus,
   Table,
   Trash,
   UploadSimple,
   WarningCircle,
+  X,
 } from "@phosphor-icons/react";
 import "@fontsource-variable/manrope";
 import { db, readAllData, seedDatabase } from "./db.js";
 import { PrimaryButton } from "./ui.jsx";
 import kamiunityLogo from "./assets/kamiunity-logo.png";
+import emptyApplication from "./assets/empty-application.png";
+import emptyDocuments from "./assets/empty-documents.png";
 import { ApplicationChecklistForm, ApplicationWorkspace } from "./ApplicationWorkspace.jsx";
 import { ApplicationForm, DocumentForm, ExternalLink, ProgramForm, TaskForm } from "./WorkflowForms.jsx";
 import { catalogToProgram, importCatalogCsv, programKey, replaceCatalog, syncCatalogFromUrl } from "./catalog.js";
 import { CATALOG_AUTO_SYNC_SETTING_KEY, DEFAULT_CATALOG_SOURCE, SHARED_CATALOG_SOURCE, STARTER_CATALOG } from "./catalog-data.js";
+import { POLIMI_CATALOG } from "./polimi-data.js";
 import { applicationDocuments, deadlineEvents, saveProgram, STATUS_OPTIONS } from "./workflow.js";
+import { isPolitecnicoDiMilano } from "./program-taxonomy.js";
 import {
   downloadBlob,
   exportEncryptedBackup,
@@ -44,16 +52,20 @@ import {
 
 const ROUTES = ["today", "programs", "applications", "documents", "calendar", "backup"];
 const NAV_ITEMS = [
+  { id: "today", label: "Today & deadlines", icon: CalendarCheck },
   { id: "applications", label: "My applications", icon: FolderSimple },
   { id: "programs", label: "Program shortlist", icon: GraduationCap },
   { id: "documents", label: "Document vault", icon: FileText },
-  { id: "calendar", label: "Deadlines", icon: CalendarBlank },
 ];
 
 function currentRoute() {
   const value = window.location.hash.replace(/^#\/?/, "").split("/")[0];
+  if (value === "calendar") return "today";
   return ROUTES.includes(value) ? value : "applications";
 }
+
+const SHARED_CATALOG_SHEET_ID = "1vu_kdUPWucy6F7lUvieuTA5MHct18aj-eha8FYTDK_s";
+const isSharedCatalogUrl = (input) => String(input || "").includes(`/spreadsheets/d/${SHARED_CATALOG_SHEET_ID}/`);
 
 function parseDate(value) {
   return new Date(`${value}T12:00:00`);
@@ -106,30 +118,93 @@ function relativeDue(value) {
   return `In ${days} days`;
 }
 
+function deadlineDays(value) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const days = daysUntil(value);
+  return Number.isFinite(days) ? days : null;
+}
+
+function qsRank(program) {
+  const directValue = String(program?.qsRanking ?? program?.qsRank ?? program?.ranking ?? "");
+  const directNumbers = directValue.match(/\d+/g);
+  if (directNumbers?.length) return Number(directNumbers[directNumbers.length - 1]);
+  const note = String(program?.notes || "");
+  const match = note.match(/(?:QS(?:\s+WUR)?[^#\n]*)#\s*(?:=|≤)?\s*(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
+
+function programSearchText(program) {
+  return [
+    program?.name,
+    program?.program,
+    program?.country,
+    program?.city,
+    program?.department,
+    program?.category,
+    program?.degreeLevel,
+    program?.intake,
+    program?.language,
+    program?.studyMode,
+    program?.funding,
+    program?.requirements,
+    program?.languageRequirements,
+    program?.notes,
+    program?.qsRanking,
+    qsRank(program),
+    ...(program?.professors || []).flatMap((professor) => [professor.name, professor.email, professor.lab]),
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function comparePrograms(first, second, sort) {
+  const textCompare = (left, right) => String(left || "").localeCompare(String(right || ""), undefined, { sensitivity: "base" });
+  if (sort === "default") {
+    const polimiFirst = Number(isPolitecnicoDiMilano(second)) - Number(isPolitecnicoDiMilano(first));
+    return polimiFirst || (deadlineDays(first.deadline) ?? Number.POSITIVE_INFINITY) - (deadlineDays(second.deadline) ?? Number.POSITIVE_INFINITY) || textCompare(first.name, second.name) || textCompare(first.program, second.program);
+  }
+  if (sort === "university") return textCompare(first.name, second.name) || textCompare(first.program, second.program);
+  if (sort === "program") return textCompare(first.program, second.program) || textCompare(first.name, second.name);
+  if (sort === "deadline") return (deadlineDays(first.deadline) ?? Number.POSITIVE_INFINITY) - (deadlineDays(second.deadline) ?? Number.POSITIVE_INFINITY) || textCompare(first.name, second.name);
+  if (sort === "ranking") return (qsRank(first) ?? Number.POSITIVE_INFINITY) - (qsRank(second) ?? Number.POSITIVE_INFINITY) || textCompare(first.name, second.name);
+  return 0;
+}
+
 function programFor(programs, task) {
   return programs.find((program) => program.id === task.programIds?.[0]);
 }
 
-function TopNavigation({ route, navigate }) {
+function TopNavigation({ route, navigate, openModal }) {
+  const navigateFromMobile = (nextRoute) => navigate(nextRoute);
   return (
-    <header className="topbar">
-      <button className="brand" type="button" onClick={() => navigate("applications")} aria-label="Kamiunity — my applications"><img src={kamiunityLogo} alt="kamiunity" /></button>
-      <nav className="topnav" aria-label="Primary navigation">
-        {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
-          <button
-            type="button"
-            key={id}
-            className={`nav-item ${route === id ? "active" : ""}`}
-            aria-current={route === id ? "page" : undefined}
-            onClick={() => navigate(id)}
-          >
-            <Icon size={24} weight={route === id ? "duotone" : "regular"} />
-            <span>{label}</span>
-          </button>
-        ))}
+    <>
+      <header className="topbar desktop-navigation">
+        <button className="brand" type="button" onClick={() => navigate("applications")} aria-label="Kamiunity — my applications"><img src={kamiunityLogo} alt="kamiunity" /></button>
+        <nav className="topnav" aria-label="Primary navigation">
+          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+            <button
+              type="button"
+              key={id}
+              className={`nav-item ${route === id ? "active" : ""}`}
+              aria-current={route === id ? "page" : undefined}
+              onClick={() => navigate(id)}
+            >
+              <Icon size={24} weight={route === id ? "duotone" : "regular"} />
+              <span className="nav-item-label">{label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="brand-utilities"><span><CheckCircle size={19} />Saved on this device</span><button className={`backup-nav-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigate("backup")} aria-label="Backup and transfer" title="Backup & transfer"><Archive size={21} /><span>Backup</span></button></div>
+      </header>
+      <nav className="mobile-navigation" aria-label="Mobile navigation">
+        <button className={`mobile-backup-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("backup")} aria-label="Backup and transfer" title="Backup & transfer"><Archive size={21} weight={route === "backup" ? "duotone" : "regular"} /><span className="visually-hidden">Backup and transfer</span></button>
+        <div className="mobile-nav-bar">
+          <button className={`mobile-nav-item ${route === "applications" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("applications")} aria-current={route === "applications" ? "page" : undefined} aria-label="Applications" title="Applications"><span className="mobile-nav-icon"><FolderSimple size={23} weight={route === "applications" ? "duotone" : "regular"} /></span><span className="visually-hidden">Applications</span></button>
+          <button className={`mobile-nav-item ${route === "programs" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("programs")} aria-current={route === "programs" ? "page" : undefined} aria-label="Programs" title="Programs"><span className="mobile-nav-icon"><GraduationCap size={23} weight={route === "programs" ? "duotone" : "regular"} /></span><span className="visually-hidden">Programs</span></button>
+          <button className="mobile-nav-item mobile-nav-add" type="button" onClick={() => openModal({ type: "add-document" })} aria-label="Add document" title="Add document"><span className="mobile-nav-icon"><FilePlus size={27} weight="bold" /></span><span className="visually-hidden">Add document</span></button>
+          <button className={`mobile-nav-item ${route === "today" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("today")} aria-current={route === "today" ? "page" : undefined} aria-label="Today and deadlines" title="Today & deadlines"><span className="mobile-nav-icon"><CalendarCheck size={23} weight={route === "today" ? "duotone" : "regular"} /></span><span className="visually-hidden">Today and deadlines</span></button>
+          <button className={`mobile-nav-item ${route === "documents" ? "active" : ""}`} type="button" onClick={() => navigateFromMobile("documents")} aria-current={route === "documents" ? "page" : undefined} aria-label="Document vault" title="Document vault"><span className="mobile-nav-icon"><FileText size={23} weight={route === "documents" ? "duotone" : "regular"} /></span><span className="visually-hidden">Document vault</span></button>
+        </div>
       </nav>
-      <div className="brand-utilities"><span><CheckCircle size={19} />Saved on this device</span><button className={`icon-button ${route === "backup" ? "active" : ""}`} type="button" onClick={() => navigate("backup")} aria-label="Backup and transfer" title="Backup & transfer"><Archive size={22} /></button></div>
-    </header>
+    </>
   );
 }
 
@@ -158,23 +233,91 @@ function EmptyState({ title, description }) {
   );
 }
 
+function FirstUseState({ image, imageAlt = "", eyebrow, title, description, primaryLabel, onPrimary, secondaryLabel, onSecondary, className = "" }) {
+  return (
+    <section className={`first-use-state soft-panel ${className}`}>
+      <div className="first-use-art-wrap"><img className="first-use-art" src={image} alt={imageAlt} /></div>
+      <div className="first-use-copy">
+        {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
+        <h2>{title}</h2>
+        <p>{description}</p>
+        <div className="first-use-actions">
+          <PrimaryButton onClick={onPrimary}>{primaryLabel}</PrimaryButton>
+          {secondaryLabel ? <button className="secondary-button soft-button" type="button" onClick={onSecondary}>{secondaryLabel}</button> : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Pagination({ page, pageCount, pageSize, total, onPageChange, onPageSizeChange, label = "programs" }) {
+  if (!total) return null;
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+  const pageNumbers = [...new Set([1, page - 1, page, page + 1, pageCount].filter((number) => number >= 1 && number <= pageCount))].sort((a, b) => a - b);
+  return (
+    <nav className="pagination" aria-label={`${label} pagination`}>
+      <span className="pagination-summary">Showing {start}–{end} of {total} {label}</span>
+      <div className="pagination-controls">
+        <button className="pagination-arrow" type="button" disabled={page === 1} onClick={() => onPageChange(page - 1)} aria-label="Previous page"><CaretLeft size={18} /></button>
+        <div className="pagination-pages">
+          {pageNumbers.map((number, index) => <Fragment key={number}>{index > 0 && number - pageNumbers[index - 1] > 1 ? <span className="pagination-ellipsis" aria-hidden="true">…</span> : null}<button className={number === page ? "active" : ""} type="button" aria-current={number === page ? "page" : undefined} onClick={() => onPageChange(number)}>{number}</button></Fragment>)}
+        </div>
+        <button className="pagination-arrow" type="button" disabled={page === pageCount} onClick={() => onPageChange(page + 1)} aria-label="Next page"><CaretRight size={18} /></button>
+      </div>
+      <label className="pagination-size">Rows <select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}><option value="10">10</option><option value="25">25</option><option value="50">50</option></select></label>
+    </nav>
+  );
+}
+
+function scheduleEvents(data) {
+  return [
+    ...data.tasks.map((task) => ({ id: `task-${task.id}`, date: task.dueDate, title: task.title, type: task.done ? "Complete" : "Task", task })),
+    ...deadlineEvents(data).map((event) => ({
+      ...event,
+      date: event.deadline,
+      title: `${event.program.name} · ${event.program.program}${event.application?.intake ? ` · ${event.application.intake}` : ""}`,
+      type: event.application ? "Application deadline" : "Program deadline",
+    })),
+  ].filter((event) => event.date).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+}
+
+function scheduleEventAction(event, openModal) {
+  if (event.task) return openModal({ type: "task", task: event.task });
+  if (event.application) return openModal({ type: "application", application: event.application });
+  return openModal({ type: "program", program: event.program });
+}
+
+function AgendaList({ events, openModal }) {
+  return <div className="agenda-list">{events.map((event) => {
+    const date = formatTaskDate(event.date);
+    return (
+      <button type="button" className="agenda-row" key={event.id} onClick={() => scheduleEventAction(event, openModal)}>
+        <span className="agenda-date"><strong>{date.weekday}</strong><span>{date.date}</span></span>
+        <span className="agenda-dot" />
+        <span className="agenda-copy"><strong>{event.title}</strong><span>{event.type}</span></span>
+        <span className="due-chip"><Clock size={20} />{relativeDue(event.date)}</span>
+        <CaretRight size={22} />
+      </button>
+    );
+  })}</div>;
+}
+
 function TodayPage({ data, openModal }) {
   const tasks = useMemo(
     () => [...data.tasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5),
     [data.tasks],
   );
   const nextTask = tasks.find((task) => !task.done);
-  const deadlines = useMemo(
-    () => deadlineEvents(data).slice(0, 4),
-    [data],
-  );
+  const events = useMemo(() => scheduleEvents(data), [data]);
+  const nextEvent = events.find((event) => daysUntil(event.date) >= 0) || events[0];
 
   return (
     <div className="page today-page">
       <PageHeader
         eyebrow={formatLongDate()}
-        title="Today’s next steps"
-        description="Move your applications forward, one task at a time."
+        title="Today & deadlines"
+        description="Your next action and every important application date, together in one calm workspace."
         action={<PrimaryButton onClick={() => openModal({ type: "add-task" })}>Add task</PrimaryButton>}
       />
 
@@ -231,16 +374,19 @@ function TodayPage({ data, openModal }) {
         ) : <EmptyState title="Your timeline is clear" description="Add a task to plan your next application step." />}
       </section>
 
-      <section className="deadline-strip soft-panel" aria-labelledby="deadline-title">
-        <div className="deadline-label" id="deadline-title"><CalendarBlank size={31} /><strong>Upcoming application deadlines</strong></div>
-        <div className="deadline-items">
-          {deadlines.map((event) => (
-            <button type="button" key={event.id} onClick={() => openModal(event.application ? { type: "application", application: event.application } : { type: "program", program: event.program })}>
-              <strong>{formatDeadlineDate(event.deadline)}</strong><span>{event.program.name}</span>
-            </button>
-          ))}
+      <section className="calendar-panel soft-panel combined-schedule" aria-labelledby="schedule-title">
+        <div className="combined-schedule-heading">
+          <div>
+            <span className="section-kicker">Plan ahead</span>
+            <h2 id="schedule-title">Tasks & deadlines</h2>
+            <p>One agenda for the dates that move your applications forward.</p>
+          </div>
+          <span className="schedule-count">{events.length} {events.length === 1 ? "date" : "dates"}</span>
         </div>
-        <CaretRight size={28} />
+        {events.length ? <>
+          <div className="calendar-summary soft-inset"><CalendarBlank size={32} weight="duotone" /><div><span>Next date</span><strong>{nextEvent.title}</strong><small>{formatDeadlineDate(nextEvent.date)} · {nextEvent.type}</small></div></div>
+          <AgendaList events={events} openModal={openModal} />
+        </> : <div className="schedule-empty"><EmptyState title="Your schedule is clear" description="Add a task or start an application with a deadline to see your plan here." /></div>}
       </section>
     </div>
   );
@@ -309,17 +455,67 @@ function CatalogConnection({ source, catalogCount, syncCatalog, importCatalog, r
 function ProgramsPage({ data, openModal, notify, addCatalogProgram, syncCatalog, importCatalog, resetCatalog }) {
   const [view, setView] = useState("catalog");
   const [query, setQuery] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [priority, setPriority] = useState("");
   const [country, setCountry] = useState("");
+  const [category, setCategory] = useState("");
   const [degree, setDegree] = useState("");
+  const [language, setLanguage] = useState("");
+  const [intake, setIntake] = useState("");
+  const [studyMode, setStudyMode] = useState("");
+  const [deadlineFilter, setDeadlineFilter] = useState("all");
+  const [rankFilter, setRankFilter] = useState("");
+  const [sort, setSort] = useState("default");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [pendingCatalogId, setPendingCatalogId] = useState("");
   const catalogPrograms = data.catalogPrograms || [];
+  const sourcePrograms = view === "catalog" ? catalogPrograms : data.programs;
   const search = query.trim().toLowerCase();
-  const countries = useMemo(() => [...new Set(catalogPrograms.map((program) => program.country).filter(Boolean))].sort(), [catalogPrograms]);
-  const degrees = useMemo(() => [...new Set(catalogPrograms.map((program) => program.degreeLevel).filter(Boolean))].sort(), [catalogPrograms]);
-  const matchesCatalog = (program) => `${program.name} ${program.program} ${program.country} ${program.city} ${program.department} ${program.degreeLevel} ${program.intake} ${program.language} ${program.funding} ${program.requirements} ${(program.professors || []).map((professor) => `${professor.name} ${professor.email} ${professor.lab}`).join(" ")}`.toLowerCase().includes(search);
-  const filteredCatalog = catalogPrograms.filter((program) => matchesCatalog(program) && (!country || program.country === country) && (!degree || program.degreeLevel === degree));
-  const filteredShortlist = data.programs.filter((program) => `${program.name} ${program.program} ${program.country} ${(program.professors || []).map((professor) => `${professor.name} ${professor.email}`).join(" ")}`.toLowerCase().includes(search) && (!priority || program.priority === priority));
+  const filterOptions = useMemo(() => {
+    const values = (key) => [...new Set(sourcePrograms.map((program) => program[key]).filter(Boolean))].sort((first, second) => String(first).localeCompare(String(second)));
+    return { countries: values("country"), categories: values("category"), degrees: values("degreeLevel"), languages: values("language"), intakes: values("intake"), studyModes: values("studyMode"), priorities: values("priority") };
+  }, [sourcePrograms]);
+  const activeFilterCount = [country, category, degree, language, intake, studyMode, priority, rankFilter, deadlineFilter !== "all" ? deadlineFilter : ""].filter(Boolean).length;
+  const filteredPrograms = useMemo(() => {
+    const matches = sourcePrograms.filter((program) => {
+      if (search && !programSearchText(program).includes(search)) return false;
+      if (country && program.country !== country) return false;
+      if (category && program.category !== category) return false;
+      if (degree && program.degreeLevel !== degree) return false;
+      if (language && program.language !== language) return false;
+      if (intake && program.intake !== intake) return false;
+      if (studyMode && program.studyMode !== studyMode) return false;
+      if (priority && program.priority !== priority) return false;
+      const rank = qsRank(program);
+      if (rankFilter === "top-100" && (!rank || rank > 100)) return false;
+      if (rankFilter === "101-300" && (!rank || rank < 101 || rank > 300)) return false;
+      if (rankFilter === "301-500" && (!rank || rank < 301 || rank > 500)) return false;
+      if (rankFilter === "501-1000" && (!rank || rank < 501 || rank > 1000)) return false;
+      if (rankFilter === "1000-plus" && (!rank || rank < 1000)) return false;
+      if (rankFilter === "unranked" && rank) return false;
+      const days = deadlineDays(program.deadline);
+      if (deadlineFilter === "set" && days === null) return false;
+      if (deadlineFilter === "missing" && days !== null) return false;
+      if (deadlineFilter === "next-30" && (days === null || days < 0 || days > 30)) return false;
+      if (deadlineFilter === "next-90" && (days === null || days < 0 || days > 90)) return false;
+      if (deadlineFilter === "overdue" && (days === null || days >= 0)) return false;
+      return true;
+    });
+    return sort === "relevance" ? matches : [...matches].sort((first, second) => comparePrograms(first, second, sort));
+  }, [sourcePrograms, search, country, category, degree, language, intake, studyMode, priority, rankFilter, deadlineFilter, sort]);
+  const pageCount = Math.max(1, Math.ceil(filteredPrograms.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const visiblePrograms = filteredPrograms.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const hasActiveSearch = Boolean(query.trim());
+  useEffect(() => { setPage(1); }, [view, query, country, category, degree, language, intake, studyMode, priority, rankFilter, deadlineFilter, sort, pageSize]);
+  useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
+  function clearFilters() {
+    setQuery(""); setPriority(""); setCountry(""); setCategory(""); setDegree(""); setLanguage(""); setIntake(""); setStudyMode(""); setDeadlineFilter("all"); setRankFilter(""); setSort("default"); setPage(1);
+  }
+  function changeView(nextView) {
+    setView(nextView); setQuery(""); setPriority(""); setCountry(""); setCategory(""); setDegree(""); setLanguage(""); setIntake(""); setStudyMode(""); setDeadlineFilter("all"); setRankFilter(""); setSort("default"); setPage(1);
+  }
   function savedProgramFor(catalogProgram) { return data.programs.find((program) => (catalogProgram.catalogId && program.catalogId === catalogProgram.catalogId) || programKey(program) === programKey(catalogProgram)); }
   async function chooseCatalogProgram(catalogProgram, mode) {
     const saved = savedProgramFor(catalogProgram);
@@ -330,28 +526,101 @@ function ProgramsPage({ data, openModal, notify, addCatalogProgram, syncCatalog,
     catch (failure) { notify(failure.message || "The program could not be added."); }
     finally { setPendingCatalogId(""); }
   }
+  const countLabel = view === "catalog" ? `${filteredPrograms.length} matches` : `${filteredPrograms.length} saved`;
+  const paginationLabel = view === "catalog" ? "programs" : "saved programs";
   return (
     <div className="page">
       <PageHeader eyebrow="Find your academic fit" title="Program shortlist" description="Search a shared program database, then bring the programs you want into your private application workspace." action={<PrimaryButton onClick={() => openModal({ type: "add-program" })}>Add program</PrimaryButton>} />
       <CatalogConnection source={data.catalogSource} catalogCount={catalogPrograms.length} syncCatalog={syncCatalog} importCatalog={importCatalog} resetCatalog={resetCatalog} notify={notify} />
       <section className="workspace-panel soft-panel">
         <div className="toolbar program-toolbar">
-          <div className="segmented soft-inset" aria-label="Program view"><button className={view === "catalog" ? "active" : ""} type="button" aria-pressed={view === "catalog"} onClick={() => setView("catalog")}>Browse database <span>{catalogPrograms.length}</span></button><button className={view === "shortlist" ? "active" : ""} type="button" aria-pressed={view === "shortlist"} onClick={() => setView("shortlist")}>My shortlist <span>{data.programs.length}</span></button></div>
-          <label className="search-field soft-inset"><MagnifyingGlass size={22} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={view === "catalog" ? "Search universities, degrees, countries…" : "Search saved programs…"} aria-label={view === "catalog" ? "Search the program database" : "Search saved programs"} /></label>
-          {view === "catalog" ? <div className="program-filter-row"><label className="toolbar-filter"><Funnel size={20} /><select aria-label="Filter by country" value={country} onChange={(event) => setCountry(event.target.value)}><option value="">All countries</option>{countries.map((item) => <option key={item}>{item}</option>)}</select></label><label className="toolbar-filter"><select aria-label="Filter by degree level" value={degree} onChange={(event) => setDegree(event.target.value)}><option value="">All degree levels</option>{degrees.map((item) => <option key={item}>{item}</option>)}</select></label></div> : <label className="toolbar-filter"><Funnel size={20} /><select aria-label="Filter by priority" value={priority} onChange={(event) => setPriority(event.target.value)}><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select></label>}
-          <span className="count-label">{view === "catalog" ? `${filteredCatalog.length} matches` : `${filteredShortlist.length} saved`}</span>
+          <div className="segmented soft-inset" aria-label="Program view"><button className={view === "catalog" ? "active" : ""} type="button" aria-pressed={view === "catalog"} onClick={() => changeView("catalog")}>Browse database <span>{catalogPrograms.length}</span></button><button className={view === "shortlist" ? "active" : ""} type="button" aria-pressed={view === "shortlist"} onClick={() => changeView("shortlist")}>My shortlist <span>{data.programs.length}</span></button></div>
+          <div className="program-search-group"><div className="search-field soft-inset"><MagnifyingGlass size={22} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={view === "catalog" ? "Search university, program, city, language…" : "Search your saved programs…"} aria-label={view === "catalog" ? "Search the program database" : "Search saved programs"} />{query ? <button className="search-clear" type="button" onClick={() => setQuery("")} aria-label="Clear program search"><X size={17} /></button> : null}</div><button className={`filter-toggle secondary-button soft-button ${filtersOpen || activeFilterCount ? "is-active" : ""}`} type="button" aria-expanded={filtersOpen} aria-controls="program-filters" onClick={() => setFiltersOpen((open) => !open)}><Funnel size={19} />Filters{activeFilterCount ? <span>{activeFilterCount}</span> : null}</button></div>
+          <span className="count-label">{countLabel}</span>
         </div>
-        {view === "catalog" ? filteredCatalog.length ? <div className="catalog-result-list">{filteredCatalog.map((catalogProgram) => {
+        {filtersOpen ? <div className="program-filters-panel soft-inset" id="program-filters">
+          <div className="program-filter-grid">
+            <label className="advanced-filter"><span>Country</span><select aria-label="Filter by country" value={country} onChange={(event) => setCountry(event.target.value)}><option value="">All countries</option>{filterOptions.countries.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label className="advanced-filter"><span>Category</span><select aria-label="Filter by category" value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{filterOptions.categories.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label className="advanced-filter"><span>Degree level</span><select aria-label="Filter by degree level" value={degree} onChange={(event) => setDegree(event.target.value)}><option value="">All degree levels</option>{filterOptions.degrees.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label className="advanced-filter"><span>Language</span><select aria-label="Filter by language" value={language} onChange={(event) => setLanguage(event.target.value)}><option value="">All languages</option>{filterOptions.languages.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label className="advanced-filter"><span>Intake</span><select aria-label="Filter by intake" value={intake} onChange={(event) => setIntake(event.target.value)}><option value="">All intakes</option>{filterOptions.intakes.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label className="advanced-filter"><span>Study mode</span><select aria-label="Filter by study mode" value={studyMode} onChange={(event) => setStudyMode(event.target.value)}><option value="">All study modes</option>{filterOptions.studyModes.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label className="advanced-filter"><span>QS ranking</span><select aria-label="Filter by QS ranking" value={rankFilter} onChange={(event) => setRankFilter(event.target.value)}><option value="">Any ranking</option><option value="top-100">Top 100</option><option value="101-300">101–300</option><option value="301-500">301–500</option><option value="501-1000">501–1000</option><option value="1000-plus">1000+</option><option value="unranked">Unranked / not added</option></select></label>
+            <label className="advanced-filter"><span>Deadline</span><select aria-label="Filter by deadline" value={deadlineFilter} onChange={(event) => setDeadlineFilter(event.target.value)}><option value="all">Any deadline</option><option value="set">Deadline added</option><option value="missing">No deadline yet</option><option value="next-30">Due in 30 days</option><option value="next-90">Due in 90 days</option><option value="overdue">Overdue</option></select></label>
+            <label className="advanced-filter"><span>Priority</span><select aria-label="Filter by priority" value={priority} onChange={(event) => setPriority(event.target.value)}><option value="">All priorities</option>{(filterOptions.priorities.length ? filterOptions.priorities : ["High", "Medium", "Low"]).map((item) => <option key={item}>{item}</option>)}</select></label>
+          </div>
+          <div className="program-filters-footer"><label className="program-sort"><span>Sort results</span><select aria-label="Sort programs" value={sort} onChange={(event) => setSort(event.target.value)}><option value="default">Politecnico di Milano first · deadline</option><option value="relevance">Relevance / source order</option><option value="university">University A–Z</option><option value="program">Program A–Z</option><option value="deadline">Deadline soonest</option><option value="ranking">QS ranking</option></select></label><span className="filter-result-copy">{countLabel}</span>{activeFilterCount || hasActiveSearch ? <button className="text-action clear-filters" type="button" onClick={clearFilters}>Clear all</button> : null}</div>
+        </div> : null}
+        {activeFilterCount || hasActiveSearch ? <div className="active-filter-summary"><span>{hasActiveSearch ? `Search: “${query.trim()}”` : "Filters active"}</span>{activeFilterCount ? <strong>{activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"}</strong> : null}<button className="text-action" type="button" onClick={clearFilters}>Clear all</button></div> : null}
+        {view === "catalog" ? filteredPrograms.length ? <div className="catalog-result-list">{visiblePrograms.map((catalogProgram) => {
           const saved = savedProgramFor(catalogProgram);
           const application = saved && data.applications.find((item) => item.programId === saved.id);
           const pending = pendingCatalogId === catalogProgram.catalogId;
+          const rank = qsRank(catalogProgram);
           return <article className="catalog-result" key={catalogProgram.id || catalogProgram.catalogId}>
-            <div className="catalog-result-main"><span className="catalog-result-source">{catalogProgram.catalogSource || data.catalogSource?.label || "Program database"}</span><h3>{catalogProgram.name}</h3><p>{catalogProgram.program}</p><div className="catalog-result-meta"><span>{[catalogProgram.city, catalogProgram.country].filter(Boolean).join(", ") || "Location not added"}</span><span>{[catalogProgram.degreeLevel, catalogProgram.intake].filter(Boolean).join(" · ") || "Graduate program"}</span></div><ExternalLink url={catalogProgram.url}>Program website</ExternalLink></div>
+            <div className="catalog-result-main"><span className="catalog-result-source">{catalogProgram.catalogSource || data.catalogSource?.label || "Program database"}</span><h3>{catalogProgram.name}</h3><p>{catalogProgram.program}</p><div className="catalog-result-meta"><span>{[catalogProgram.city, catalogProgram.country].filter(Boolean).join(", ") || "Location not added"}</span><span>{[catalogProgram.degreeLevel, catalogProgram.intake].filter(Boolean).join(" · ") || "Graduate program"}</span>{catalogProgram.category ? <span className="program-category-badge">{catalogProgram.category}</span> : null}{rank ? <span>QS #{rank}</span> : null}</div><ExternalLink url={catalogProgram.url}>Program website</ExternalLink></div>
             <div className="catalog-result-details"><div><small>Deadline</small><strong className={catalogProgram.deadline ? "date-text" : "muted-value"}>{catalogProgram.deadline ? formatShortDate(catalogProgram.deadline) : "Verify date"}</strong><span>{catalogProgram.deadline ? relativeDue(catalogProgram.deadline) : "Not added"}</span></div><div><small>Funding</small><strong>{catalogProgram.funding || "Not added"}</strong><span>{catalogProgram.tuition || "Tuition not added"}</span></div></div>
             <div className="catalog-result-actions">{saved ? <span className="catalog-saved"><CheckCircle size={19} />Saved to shortlist</span> : <button className="secondary-button soft-button" type="button" disabled={pending} onClick={() => chooseCatalogProgram(catalogProgram, "shortlist")}>{pending ? "Adding…" : "Add to shortlist"}</button>}{application ? <button className="text-action" type="button" onClick={() => openModal({ type: "application", application })}>Open application<CaretRight size={18} /></button> : <PrimaryButton disabled={pending} onClick={() => chooseCatalogProgram(catalogProgram, "application")}>{pending ? "Adding…" : "Start application"}</PrimaryButton>}</div>
             {catalogProgram.catalogLastVerified ? <small className="catalog-verification">{catalogProgram.catalogLastVerified}</small> : null}
           </article>;
-        })}</div> : <EmptyState title="No matching catalog programs" description="Try a broader search, clear a filter, or connect a different Google Sheet." /> : filteredShortlist.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>University & program</th><th>Country</th><th>Deadline</th><th>Tuition</th><th>Funding</th><th>Priority</th><th aria-label="Actions" /></tr></thead><tbody>{filteredShortlist.map((program) => <tr key={program.id}><td><button className="record-link" type="button" onClick={() => openModal({ type: "program", program })}><strong>{program.name}</strong><span>{program.program}</span></button><ExternalLink url={program.url}>Program website</ExternalLink><span>{data.documents.filter((document) => document.linkedProgramIds?.includes(program.id)).length} documents · {program.professors?.length || 0} professors</span></td><td>{program.country || "Not added"}</td><td><strong className="date-text">{formatShortDate(program.deadline)}</strong><span>{relativeDue(program.deadline)}</span></td><td>{program.tuition || "Not added"}</td><td>{program.funding || "Not added"}</td><td><span className={`priority-label ${program.priority?.toLowerCase()}`}>{program.priority}</span></td><td><div className="record-actions"><button className="secondary-button soft-button" type="button" onClick={() => openModal({ type: "add-application", programId: program.id })}>Start application</button><button className="icon-button" type="button" onClick={() => openModal({ type: "program", program })} aria-label={`Edit ${program.name}`}><CaretRight size={22} /></button></div></td></tr>)}</tbody></table></div> : <EmptyState title="No matching saved programs" description="Browse the database or add a program manually to start your shortlist." />}
+        })}</div> : <EmptyState title="No matching catalog programs" description="Try a broader search, clear a filter, or connect a different Google Sheet." /> : filteredPrograms.length ? <>
+          <div className="program-shortlist-desktop data-table-wrap"><table className="data-table program-shortlist-table"><thead><tr><th>University & program</th><th>Category</th><th>Country</th><th>Deadline</th><th>Tuition</th><th>Funding</th><th>Priority</th><th aria-label="Actions" /></tr></thead><tbody>{visiblePrograms.map((program) => <tr key={program.id}><td><button className="record-link" type="button" onClick={() => openModal({ type: "program", program })}><strong>{program.name}</strong><span>{program.program}</span></button><ExternalLink url={program.url}>Program website</ExternalLink><span>{data.documents.filter((document) => document.linkedProgramIds?.includes(program.id)).length} documents · {program.professors?.length || 0} professors</span></td><td><span className="program-category-badge">{program.category || "Other"}</span></td><td>{program.country || "Not added"}</td><td><strong className="date-text">{formatShortDate(program.deadline)}</strong><span>{relativeDue(program.deadline)}</span></td><td>{program.tuition || "Not added"}</td><td>{program.funding || "Not added"}</td><td><span className={`priority-label ${program.priority?.toLowerCase()}`}>{program.priority}</span></td><td><div className="record-actions"><button className="secondary-button soft-button" type="button" onClick={() => openModal({ type: "add-application", programId: program.id })}>Start application</button><button className="icon-button" type="button" onClick={() => openModal({ type: "program", program })} aria-label={`Edit ${program.name}`}><CaretRight size={22} /></button></div></td></tr>)}</tbody></table></div>
+          <div className="program-shortlist-mobile" aria-label="Saved program cards">{visiblePrograms.map((program) => <article className="shortlist-card" key={program.id}>
+            <div className="shortlist-card-heading"><div className="shortlist-card-identity"><span className="shortlist-card-kicker">{[program.city, program.country].filter(Boolean).join(", ") || "Location not added"}</span><button className="record-link" type="button" onClick={() => openModal({ type: "program", program })}><strong>{program.name}</strong><span>{program.program}</span></button></div><span className={`priority-label ${program.priority?.toLowerCase()}`}>{program.priority}</span></div>
+            <div className="shortlist-card-meta"><div><small>Category</small><strong>{program.category || "Other"}</strong></div><div><small>Deadline</small><strong className="date-text">{formatShortDate(program.deadline)}</strong><span>{relativeDue(program.deadline)}</span></div><div><small>QS ranking</small><strong>{qsRank(program) ? `#${qsRank(program)}` : "Not added"}</strong></div></div>
+            <div className="shortlist-card-footer"><span>{data.documents.filter((document) => document.linkedProgramIds?.includes(program.id)).length} documents · {program.professors?.length || 0} professors</span><ExternalLink url={program.url}>Program website</ExternalLink></div>
+            <div className="shortlist-card-actions"><button className="secondary-button soft-button" type="button" onClick={() => openModal({ type: "add-application", programId: program.id })}>Start application</button><button className="icon-button" type="button" onClick={() => openModal({ type: "program", program })} aria-label={`Edit ${program.name}`}><CaretRight size={22} /></button></div>
+          </article>)}</div>
+        </> : <EmptyState title="No matching saved programs" description="Browse the database or add a program manually to start your shortlist." />}
+        {filteredPrograms.length ? <Pagination page={currentPage} pageCount={pageCount} pageSize={pageSize} total={filteredPrograms.length} onPageChange={setPage} onPageSizeChange={setPageSize} label={paginationLabel} /> : null}
+      </section>
+    </div>
+  );
+}
+
+function HomePage({ data, openModal, navigate }) {
+  const catalogCount = data.catalogPrograms?.length || 0;
+  const savedCount = data.programs?.length || 0;
+  const documentCount = data.documents?.length || 0;
+  const formatCount = (value) => new Intl.NumberFormat("en-US").format(value);
+  const steps = [
+    { number: "01", icon: GraduationCap, eyebrow: "Discover", title: "Find programs that fit", description: "Search the shared catalog by country, language, degree, deadline, or QS ranking.", action: "Browse programs", onClick: () => navigate("programs") },
+    { number: "02", icon: FolderSimple, eyebrow: "Shortlist", title: "Save the ones worth pursuing", description: "Keep promising programs together, then start an application when the fit feels right.", action: "Build a shortlist", onClick: () => navigate("programs") },
+    { number: "03", icon: FileText, eyebrow: "Prepare", title: "Build a connected dossier", description: "Link documents, requirements, and professor contacts to each application.", action: "Open document vault", onClick: () => navigate("documents") },
+    { number: "04", icon: CalendarCheck, eyebrow: "Move forward", title: "Make the next step visible", description: "Track stages, tasks, and deadlines so nothing important stays in your head.", action: "See deadlines", onClick: () => navigate("calendar") },
+  ];
+
+  return (
+    <div className="page home-page">
+      <section className="home-hero soft-panel" aria-labelledby="home-title">
+        <div className="home-hero-copy">
+          <span className="eyebrow">A calmer application season</span>
+          <h1 id="home-title">From first search to final submission.</h1>
+          <p>Keep programs, deadlines, documents, and professor outreach connected in one private workspace built for graduate applications.</p>
+          <div className="home-hero-actions">
+            <PrimaryButton icon={ArrowRight} onClick={() => navigate("programs")}>Explore programs</PrimaryButton>
+            <button className="secondary-button soft-button" type="button" onClick={() => openModal({ type: "add-application" })}>Add an application</button>
+          </div>
+          <div className="home-assurance"><span><CheckCircle size={18} />Saved on this device</span><span><CheckCircle size={18} />No account required</span></div>
+        </div>
+        <div className="home-hero-visual" aria-label="A preview of the connected application workflow">
+          <div className="home-hero-badge"><span>START HERE</span><strong>One place for every next step.</strong></div>
+          <div className="home-hero-image-frame"><img src={emptyApplication} alt="Illustration of an organized graduate application workspace" /></div>
+          <div className="home-hero-float"><CalendarCheck size={23} /><span><small>Keep deadlines visible</small><strong>Today’s next step</strong></span></div>
+        </div>
+      </section>
+
+      <section className="home-guide" aria-labelledby="home-guide-title">
+        <div className="home-section-heading"><div><span className="section-kicker">How Kamiunity works</span><h2 id="home-guide-title">A simple path through a complicated process.</h2></div><p>Start small. Each piece you add becomes part of the same application story.</p></div>
+        <div className="home-steps">
+          {steps.map(({ number, icon: Icon, eyebrow, title, description, action, onClick }) => <article className="home-step soft-inset" key={number}><div className="home-step-top"><span className="home-step-number">{number}</span><Icon size={27} weight="duotone" /></div><span className="section-kicker">{eyebrow}</span><h3>{title}</h3><p>{description}</p><button className="text-action home-step-action" type="button" onClick={onClick}>{action}<ArrowRight size={17} /></button></article>)}
+        </div>
+      </section>
+
+      <section className="home-overview-grid" aria-label="Kamiunity workspace overview">
+        <article className="home-overview-card home-trust-card soft-inset"><div className="home-card-heading"><span className="home-card-icon"><HardDrive size={25} weight="duotone" /></span><div><span className="section-kicker">Private by default</span><h2>Your work stays yours.</h2></div></div><p>Kamiunity stores your records on this device. When you need a safety copy, create an encrypted backup from Backup & transfer.</p><div className="home-overview-points"><span><CheckCircle size={17} />Local-first workspace</span><span><CheckCircle size={17} />Portable Excel exports</span></div><button className="text-action" type="button" onClick={() => navigate("backup")}>Open Backup & transfer<ArrowRight size={17} /></button></article>
+        <article className="home-overview-card home-start-card soft-panel"><span className="section-kicker">Your starting point</span><h2>Build momentum one record at a time.</h2><p>There is no perfect first step. Explore a program, save a possibility, or add the document you already have.</p><div className="home-stats"><div><strong>{formatCount(catalogCount)}</strong><span>programs to explore</span></div><div><strong>{formatCount(savedCount)}</strong><span>saved programs</span></div><div><strong>{formatCount(documentCount)}</strong><span>documents added</span></div></div></article>
       </section>
     </div>
   );
@@ -368,6 +637,7 @@ function ApplicationsPage({ data, refresh, notify, openModal, navigate }) {
     notify(`Application moved to ${status}.`);
     } catch { notify("Could not save the status. Please try again."); }
   }
+  if (view === "dossier" && !data.applications.length) return <HomePage data={data} openModal={openModal} navigate={navigate} />;
   if (view === "dossier") return <ApplicationWorkspace data={data} refresh={refresh} notify={notify} openModal={openModal} navigate={navigate} onOpenTable={() => setView("table")} />;
   return (
     <div className="page">
@@ -408,13 +678,13 @@ function ApplicationsPage({ data, refresh, notify, openModal, navigate }) {
             </section>
           ))}</div>
         )}
-        {!joined.length ? <EmptyState title="No matching applications" description="Start an application from a saved program or try another search." /> : null}
+        {!joined.length ? data.applications.length ? <EmptyState title="No matching applications" description="Try another university, degree, or intake." /> : <FirstUseState className="compact-first-use" image={emptyApplication} eyebrow="Start your application workspace" title="Your application list is ready for its first program." description="Save a program to your shortlist, then turn it into an application when you are ready to track the next step." primaryLabel="Add application" onPrimary={() => openModal({ type: "add-application" })} secondaryLabel="Browse programs" onSecondary={() => navigate("programs")} /> : null}
       </section>
     </div>
   );
 }
 
-function DocumentsPage({ data, refresh, notify, openModal }) {
+function DocumentsPage({ data, refresh, notify, openModal, navigate }) {
   const [selectedId, setSelectedId] = useState(data.documents[0]?.id);
   const [query, setQuery] = useState("");
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -431,6 +701,21 @@ function DocumentsPage({ data, refresh, notify, openModal }) {
     catch { notify("Could not remove the document. Please try again."); }
     finally { setRemoving(false); }
   }
+  if (!data.documents.length) return (
+    <div className="page first-use-page">
+      <PageHeader eyebrow="Your application evidence" title="Document vault" description="One academic CV. Every application that needs it. Keep versions and assignments together." localMessage="Stored only on this device" action={<PrimaryButton onClick={() => openModal({ type: "add-document", onSaved: setSelectedId })}>Add document</PrimaryButton>} />
+      <FirstUseState
+        image={emptyDocuments}
+        eyebrow="Build your evidence kit"
+        title="Your document vault is ready."
+        description="Upload your CV, transcript, and other files once. Then link them to the programs and applications that need them."
+        primaryLabel="Upload your first document"
+        onPrimary={() => openModal({ type: "add-document", onSaved: setSelectedId })}
+        secondaryLabel="Browse programs"
+        onSecondary={() => navigate("programs")}
+      />
+    </div>
+  );
   return (
     <div className="page">
       <PageHeader eyebrow="Your application evidence" title="Document vault" description="One academic CV. Every application that needs it. Keep versions and assignments together." localMessage="Stored only on this device" action={<PrimaryButton onClick={() => openModal({ type: "add-document", onSaved: setSelectedId })}>Add document</PrimaryButton>} />
@@ -456,23 +741,6 @@ function DocumentsPage({ data, refresh, notify, openModal }) {
           </> : <EmptyState title="No document selected" description="Choose a file to see its application links." />}
         </aside>
       </div>
-    </div>
-  );
-}
-
-function CalendarPage({ data, openModal }) {
-  const events = [...data.tasks.map((task) => ({ id: `task-${task.id}`, date: task.dueDate, title: task.title, type: task.done ? "Complete" : "Task", task })), ...deadlineEvents(data).map((event) => ({ ...event, date: event.deadline, title: `${event.program.name} · ${event.program.program}${event.application?.intake ? ` · ${event.application.intake}` : ""}`, type: event.application ? "Application deadline" : "Program deadline" }))].filter((event) => event.date).sort((a, b) => a.date.localeCompare(b.date));
-  return (
-    <div className="page">
-      <PageHeader eyebrow="Your admissions calendar" title="Deadlines" description="See what needs to happen before each application closes." action={<PrimaryButton onClick={() => openModal({ type: "add-task" })}>Add task</PrimaryButton>} />
-      <section className="calendar-panel soft-panel">
-        <div className="calendar-summary soft-inset"><CalendarBlank size={32} weight="duotone" /><div><span>Next deadline</span><strong>{events.find((event) => daysUntil(event.date) >= 0)?.title || "Nothing scheduled"}</strong></div></div>
-        <div className="agenda-list">{events.map((event) => { const date = formatTaskDate(event.date); return (
-          <button type="button" className="agenda-row" key={event.id} onClick={() => openModal(event.task ? { type: "task", task: event.task } : event.application ? { type: "application", application: event.application } : { type: "program", program: event.program })}>
-            <span className="agenda-date"><strong>{date.weekday}</strong><span>{date.date}</span></span><span className="agenda-dot" /><span className="agenda-copy"><strong>{event.title}</strong><span>{event.type}</span></span><span className="due-chip"><Clock size={20} />{relativeDue(event.date)}</span><CaretRight size={22} />
-          </button>
-        ); })}</div>
-      </section>
     </div>
   );
 }
@@ -556,16 +824,33 @@ export function App() {
   const [toast, setToast] = useState("");
   const [installPrompt, setInstallPrompt] = useState(null);
   async function refresh() { setData(await readAllData()); }
+  async function ensurePolimiCatalog(source) {
+    const current = await db.catalogPrograms.toArray();
+    const keys = new Set(current.map((program) => programKey(program)));
+    const additions = POLIMI_CATALOG.filter((program) => !keys.has(programKey(program))).map((program) => ({ ...program }));
+    if (!additions.length) return source;
+    const nextSource = { ...source, label: `${source?.label || "Google Sheet"} + Politecnico di Milano`, rowCount: current.length + additions.length };
+    await replaceCatalog([...current, ...additions], nextSource);
+    return nextSource;
+  }
   async function openWorkspace() {
     await seedDatabase();
     const initial = await readAllData();
     const autoSync = await db.settings.get(CATALOG_AUTO_SYNC_SETTING_KEY);
     const source = initial.catalogSource;
     if (source?.mode === "google-sheet" && source.inputUrl) {
-      try { await syncCatalogFromUrl(source.inputUrl); } catch { /* Keep the last local snapshot when offline. */ }
+      try {
+        const result = await syncCatalogFromUrl(source.inputUrl);
+        if (isSharedCatalogUrl(source.inputUrl)) await ensurePolimiCatalog(result.source);
+      } catch {
+        // Keep the last local snapshot when offline, but preserve the built-in
+        // Polimi records for users who already have an older shared snapshot.
+        if (isSharedCatalogUrl(source.inputUrl)) await ensurePolimiCatalog(source);
+      }
     } else if (!autoSync?.value) {
       try {
-        await syncCatalogFromUrl(SHARED_CATALOG_SOURCE.inputUrl);
+        const result = await syncCatalogFromUrl(SHARED_CATALOG_SOURCE.inputUrl);
+        await ensurePolimiCatalog(result.source);
         await db.settings.put({ key: CATALOG_AUTO_SYNC_SETTING_KEY, value: true });
       } catch { /* Keep the starter snapshot and allow a later retry. */ }
     }
@@ -584,11 +869,12 @@ export function App() {
     return () => { window.removeEventListener("hashchange", handleHash); window.removeEventListener("beforeinstallprompt", handleInstall); };
   }, []);
   useEffect(() => { if (!toast) return undefined; const timeout = window.setTimeout(() => setToast(""), 3600); return () => window.clearTimeout(timeout); }, [toast]);
-  useEffect(() => { document.title = `Kamiunity — ${NAV_ITEMS.find((item) => item.id === route)?.label || (route === "today" ? "Today’s next steps" : "Backup & transfer")}`; }, [route]);
-  function navigate(next) { window.location.hash = `/${next}`; setRoute(next); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  useEffect(() => { document.title = `Kamiunity — ${NAV_ITEMS.find((item) => item.id === route)?.label || (route === "backup" ? "Backup & transfer" : "Today & deadlines")}`; }, [route]);
+  function navigate(next) { const target = next === "calendar" ? "today" : next; window.location.hash = `/${target}`; setRoute(target); window.scrollTo({ top: 0, behavior: "smooth" }); }
   async function installApp() { if (!installPrompt) return; await installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null); }
   async function syncProgramCatalog(inputUrl) {
     const result = await syncCatalogFromUrl(inputUrl);
+    if (isSharedCatalogUrl(inputUrl)) await ensurePolimiCatalog(result.source);
     await refresh();
     return result;
   }
@@ -617,11 +903,11 @@ export function App() {
     return programId;
   }
   const common = { data, refresh, notify: setToast, openModal: setModal, navigate, addCatalogProgram, syncCatalog: syncProgramCatalog, importCatalog: importProgramCatalog, resetCatalog: resetProgramCatalog };
-  const pages = { today: <TodayPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, documents: <DocumentsPage {...common} />, calendar: <CalendarPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} /> };
+  const pages = { today: <TodayPage {...common} />, programs: <ProgramsPage {...common} />, applications: <ApplicationsPage {...common} />, documents: <DocumentsPage {...common} />, calendar: <TodayPage {...common} />, backup: <BackupPage {...common} installPrompt={installPrompt} installApp={installApp} /> };
   if (!ready) return <main className="loading-screen"><img className="loading-brand" src={kamiunityLogo} alt="kamiunity" /><strong>{loadError ? "Your workspace could not open" : "Opening your application workspace…"}</strong><span role={loadError ? "alert" : undefined}>{loadError || "Your records stay on this device."}</span>{loadError ? <button className="secondary-button soft-button" type="button" onClick={() => window.location.reload()}>Try again</button> : null}</main>;
   return (
     <div className="app-shell kamiunity">
-      <TopNavigation route={route} navigate={navigate} /><main className="app-main">{pages[route]}</main>
+      <TopNavigation route={route} navigate={navigate} openModal={setModal} /><main className="app-main">{pages[route]}</main>
       {["task", "add-task"].includes(modal?.type) ? <TaskForm key={`task-${modal.task?.id || "new"}`} {...common} task={modal.task} applicationId={modal.applicationId} close={() => setModal(null)} /> : null}
       {["program", "add-program"].includes(modal?.type) ? <ProgramForm key={`program-${modal.program?.id || "new"}`} {...common} program={modal.program} close={() => setModal(null)} /> : null}
       {["application", "add-application"].includes(modal?.type) ? <ApplicationForm key={`application-${modal.application?.id || modal.programId || "new"}`} {...common} application={modal.application} programId={modal.programId} focusSection={modal.focusSection} close={() => setModal(null)} /> : null}
