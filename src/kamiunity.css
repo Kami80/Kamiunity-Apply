@@ -721,10 +721,15 @@ body {
     var(--canvas);
 }
 
-.kamiunity .app-main,
-.kamiunity .desktop-navigation {
+.kamiunity .app-main {
   position: relative;
   z-index: 1;
+}
+
+.kamiunity .desktop-navigation {
+  position: sticky;
+  top: 0;
+  z-index: 40;
 }
 
 .kamiunity .desktop-navigation {
@@ -4212,11 +4217,6 @@ body,
   pointer-events: none;
 }
 
-:root[data-theme="dark"] .kamiunity > * {
-  position: relative;
-  z-index: 1;
-}
-
 :root[data-theme="dark"] .kamiunity .desktop-navigation {
   border-color: rgba(247, 184, 199, 0.2);
   background: linear-gradient(180deg, rgba(27, 22, 40, 0.94), rgba(16, 15, 27, 0.84));
@@ -4847,4 +4847,29 @@ body,
 
 :root[data-theme="dark"] * {
   scrollbar-color: var(--teal) rgba(85, 200, 189, 0.12);
+}
+
+/* Shell layering: keep navigation above scrollable page content while
+   leaving modal backdrops (z-index: 50) and toasts (z-index: 80) on top. */
+.kamiunity .desktop-navigation {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+@media (max-width: 820px) {
+  .kamiunity .mobile-navigation {
+    z-index: 40;
+  }
+
+  .kamiunity .mobile-profile-button,
+  .kamiunity .mobile-install-button,
+  .kamiunity .mobile-theme-button,
+  .kamiunity .mobile-backup-button {
+    z-index: 41;
+  }
+
+  .kamiunity .mobile-nav-bar {
+    z-index: 40;
+  }
 }
