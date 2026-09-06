@@ -738,29 +738,6 @@ const SERVICE_OPTIONS = [
     description: "Talk through your goals, shortlist, timeline, or next move with a clear agenda.",
     icon: VideoCamera,
     accent: "peach",
-    email: {
-      subject: "Meeting request — [Your name]",
-      body: `Hi Kamyab,
-
-My name is [Your name], and I’m planning to apply for [degree/program] at [university or country]. I’d like to book a meeting to discuss [what you need help with].
-
-My preferred times, including my timezone, are:
-1. [Option 1]
-2. [Option 2]
-
-My background and current application stage: [short context]
-
-Thank you,
-[Your name]
-[Your Telegram username or phone]`,
-    },
-    telegram: `Hi Kamyab! I’d like to book a meeting about my graduate application.
-
-Program or goal: [degree/program + university or country]
-What I need help with: [short description]
-Preferred times and timezone: [two or three options]
-
-My name is [Your name]. Thank you!`,
   },
   {
     id: "resume",
@@ -770,30 +747,6 @@ My name is [Your name]. Thank you!`,
     description: "Turn your experience, projects, and goals into a focused academic or professional CV.",
     icon: FileText,
     accent: "blue",
-    email: {
-      subject: "Resume / CV building request — [Your name]",
-      body: `Hi Kamyab,
-
-I’d like help building or improving my resume/CV for [program, university, scholarship, or job].
-
-My target and deadline: [details]
-My current background: [degree, experience, projects, or skills]
-What I already have: [old CV, LinkedIn, portfolio, or notes]
-What I want to improve: [structure, wording, positioning, or all of it]
-
-I can share the relevant files and links. Please let me know the next step and an available time if a meeting would help.
-
-Best,
-[Your name]`,
-    },
-    telegram: `Hi Kamyab! I’d like help building or improving my resume/CV.
-
-Target: [program, university, scholarship, or job]
-Deadline: [date]
-My background: [degree, experience, projects, or skills]
-What I need help with: [structure, wording, positioning, or all of it]
-
-I can send my current CV and supporting links. What should I share first?`,
   },
   {
     id: "sop",
@@ -803,32 +756,6 @@ I can send my current CV and supporting links. What should I share first?`,
     description: "Shape your story, evidence, and goals into a convincing statement for the right audience.",
     icon: Sparkle,
     accent: "amber",
-    email: {
-      subject: "Motivation letter / SOP support — [Your name]",
-      body: `Hi Kamyab,
-
-I’d like help with a motivation letter or SOP for [program and university].
-
-Application deadline: [date]
-Required length or prompt: [word count / prompt]
-Why this program fits me: [your notes]
-My relevant experience: [projects, research, work, or achievements]
-My future goal: [short-term and long-term direction]
-Current draft or ideas: [attach or summarize]
-
-I’d appreciate help with the structure, clarity, and positioning of my story.
-
-Best,
-[Your name]`,
-    },
-    telegram: `Hi Kamyab! I’d like help with a motivation letter/SOP for [program + university].
-
-Deadline: [date]
-Prompt or word limit: [details]
-My background and goals: [short summary]
-Current draft: [ready / not yet]
-
-I can send my notes or draft. What would you like to see first?`,
   },
   {
     id: "review",
@@ -838,58 +765,81 @@ I can send my notes or draft. What would you like to see first?`,
     description: "Get a second look at your documents, fit, timeline, and next actions before you submit.",
     icon: UsersThree,
     accent: "sage",
-    email: {
-      subject: "Application package review — [Your name]",
-      body: `Hi Kamyab,
-
-I’d like a review of my application package for [program and university].
-
-Deadline: [date]
-Current stage: [researching / preparing / ready to submit]
-Documents I have: [CV, transcript, motivation letter/SOP, recommendation letters, etc.]
-Main questions: [fit, missing pieces, clarity, timeline, or submission requirements]
-
-I can share the documents and program link for context. Please let me know how we can start.
-
-Best,
-[Your name]`,
-    },
-    telegram: `Hi Kamyab! Could you review my application package for [program + university]?
-
-Deadline: [date]
-Current stage: [researching / preparing / ready to submit]
-Documents ready: [list]
-My main questions: [fit, missing pieces, clarity, or timeline]
-
-I can send the program link and files here. Thank you!`,
   },
 ];
 
-function ServicesPage({ notify }) {
+function profileContactValue(profile, key, fallback) {
+  const value = String(profile?.[key] || "").trim();
+  return value || fallback;
+}
+
+function profileContactLines(profile) {
+  return [
+    ["Name", profile?.fullName],
+    ["Email", profile?.email],
+    ["Previous degree", profile?.lastDegree],
+    ["University", profile?.university],
+    ["Program", profile?.programName],
+  ]
+    .map(([label, value]) => [label, String(value || "").trim()])
+    .filter(([, value]) => value);
+}
+
+function buildServiceDraft(serviceId, profile) {
+  const name = profileContactValue(profile, "fullName", "A student");
+  const profileLines = profileContactLines(profile);
+  const profileSummary = profileLines.length
+    ? profileLines.map(([label, value]) => `${label}: ${value}`).join("\n")
+    : "I can share my profile details in our conversation.";
+  const profileSummaryShort = profileLines
+    .filter(([label]) => label !== "Email")
+    .map(([label, value]) => `${label}: ${value}`)
+    .join("\n");
+  const contactLine = profile?.email ? `You can also reach me at ${profile.email}.` : "I can share my contact details in the conversation.";
+
+  const drafts = {
+    meeting: {
+      subject: `Meeting request — ${name}`,
+      emailBody: `Hi Kamyab,\n\nMy name is ${name}, and I’d like to book a meeting about my graduate application.\n\nMy saved profile details:\n${profileSummary}\n\nI’d like help with my application plan, shortlist, timeline, or next steps. Please let me know your available times.\n\n${contactLine}\n\nThank you,\n${name}`,
+      telegramBody: `Hi Kamyab! I’d like to book a meeting about my graduate application.\n\n${profileSummaryShort || `Name: ${name}`}\n\nI’d like help with my application plan, shortlist, timeline, or next steps. Please let me know your available times.`,
+    },
+    resume: {
+      subject: `Resume / CV building request — ${name}`,
+      emailBody: `Hi Kamyab,\n\nI’d like help building or improving my resume/CV.\n\nMy saved profile details:\n${profileSummary}\n\nI’d like to shape my experience for my graduate application. I can share my current CV and supporting links. Please let me know what I should send first.\n\nBest,\n${name}`,
+      telegramBody: `Hi Kamyab! I’d like help building or improving my resume/CV.\n\n${profileSummaryShort || `Name: ${name}`}\n\nI can send my current CV and supporting links. What should I share first?`,
+    },
+    sop: {
+      subject: `Motivation letter / SOP support — ${name}`,
+      emailBody: `Hi Kamyab,\n\nI’d like help with a motivation letter or SOP for my graduate application.\n\nMy saved profile details:\n${profileSummary}\n\nI can share the program prompt, word limit, notes, or current draft. I’d appreciate help with the structure, clarity, and positioning of my story.\n\nBest,\n${name}`,
+      telegramBody: `Hi Kamyab! I’d like help with a motivation letter or SOP for my graduate application.\n\n${profileSummaryShort || `Name: ${name}`}\n\nI can send the program prompt, my notes, or a current draft. What should I share first?`,
+    },
+    review: {
+      subject: `Application package review — ${name}`,
+      emailBody: `Hi Kamyab,\n\nI’d like a review of my graduate application package.\n\nMy saved profile details:\n${profileSummary}\n\nI can share the program link and my documents. I’d appreciate a second look at fit, missing pieces, clarity, timeline, and submission requirements. Please let me know how we can start.\n\nBest,\n${name}`,
+      telegramBody: `Hi Kamyab! I’d like a review of my graduate application package.\n\n${profileSummaryShort || `Name: ${name}`}\n\nI can send the program link and my documents. I’d appreciate help with fit, missing pieces, clarity, or timeline.`,
+    },
+  };
+
+  return drafts[serviceId] || drafts.meeting;
+}
+
+function ServicesPage({ data, notify }) {
   const [serviceId, setServiceId] = useState(SERVICE_OPTIONS[0].id);
-  const [channel, setChannel] = useState("email");
-  const [copied, setCopied] = useState(false);
   const selectedService = SERVICE_OPTIONS.find((service) => service.id === serviceId) || SERVICE_OPTIONS[0];
-  const templateText = channel === "email" ? selectedService.email.body : selectedService.telegram;
-  const copyText = channel === "email" ? `Subject: ${selectedService.email.subject}\n\n${selectedService.email.body}` : selectedService.telegram;
+  const profile = data?.profile || {};
+  const draft = useMemo(() => buildServiceDraft(selectedService.id, profile), [selectedService.id, profile]);
+  const emailHref = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.emailBody)}`;
+  const telegramHref = `https://t.me/${TELEGRAM_HANDLE}?text=${encodeURIComponent(draft.telegramBody)}`;
+  const profileFields = profileContactLines(profile).filter(([label]) => label !== "Email");
+  const SelectedServiceIcon = selectedService.icon;
 
-  useEffect(() => { setCopied(false); }, [serviceId, channel]);
-
-  async function copyTemplate() {
-    try {
-      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
-      await navigator.clipboard.writeText(copyText);
-      setCopied(true);
-      notify("Template copied to your clipboard.");
-      window.setTimeout(() => setCopied(false), 2200);
-    } catch {
-      notify("Copy is unavailable here. Select the template text manually.");
-    }
+  function announceOpen(channel) {
+    notify(`Opening ${channel} with your ${selectedService.label.toLowerCase()} details.`);
   }
 
   function chooseService(id) {
     setServiceId(id);
-    window.requestAnimationFrame(() => document.getElementById("template-studio")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    window.requestAnimationFrame(() => document.getElementById("service-launch")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   return (
@@ -899,7 +849,7 @@ function ServicesPage({ notify }) {
         title="Services & contact"
         description="Bring the question, draft, or half-finished idea. We can turn it into a clear next step."
         localMessage="Direct contact · no form required"
-        action={<div className="services-page-actions"><a className="primary-button" href={`mailto:${CONTACT_EMAIL}`}><EnvelopeSimple size={19} />Email me</a><a className="secondary-button soft-button" href={`https://t.me/${TELEGRAM_HANDLE}`} target="_blank" rel="noreferrer"><ChatCircleText size={19} />Telegram</a></div>}
+        action={<div className="services-page-actions"><a className="primary-button" href={emailHref} onClick={() => announceOpen("email")}><EnvelopeSimple size={19} />Email this request</a><a className="secondary-button soft-button" href={telegramHref} target="_blank" rel="noreferrer" onClick={() => announceOpen("Telegram")}><ChatCircleText size={19} />Telegram this request</a></div>}
       />
 
       <section className="services-hero soft-panel" aria-labelledby="services-hero-title">
@@ -914,15 +864,15 @@ function ServicesPage({ notify }) {
           <span className="section-kicker">Reach out directly</span>
           <h3>Let’s work on the next piece together.</h3>
           <div className="services-contact-links">
-            <a className="services-contact-link" href={`mailto:${CONTACT_EMAIL}`}><span className="services-contact-link-icon"><EnvelopeSimple size={19} /></span><span><small>Email</small><strong>{CONTACT_EMAIL}</strong></span><ArrowSquareOut size={17} /></a>
-            <a className="services-contact-link" href={`https://t.me/${TELEGRAM_HANDLE}`} target="_blank" rel="noreferrer"><span className="services-contact-link-icon"><ChatCircleText size={19} /></span><span><small>Telegram</small><strong>@{TELEGRAM_HANDLE}</strong></span><ArrowSquareOut size={17} /></a>
+            <a className="services-contact-link" href={emailHref} onClick={() => announceOpen("email")}><span className="services-contact-link-icon"><EnvelopeSimple size={19} /></span><span><small>Email · {selectedService.label}</small><strong>{CONTACT_EMAIL}</strong></span><ArrowSquareOut size={17} /></a>
+            <a className="services-contact-link" href={telegramHref} target="_blank" rel="noreferrer" onClick={() => announceOpen("Telegram")}><span className="services-contact-link-icon"><ChatCircleText size={19} /></span><span><small>Telegram · {selectedService.label}</small><strong>@{TELEGRAM_HANDLE}</strong></span><ArrowSquareOut size={17} /></a>
           </div>
-          <small className="services-contact-note">Share your target program, deadline, and what feels difficult right now.</small>
+          <small className="services-contact-note">Your saved profile details are added to the draft automatically.</small>
         </aside>
       </section>
 
       <section className="services-offerings" aria-labelledby="services-offerings-title">
-        <div className="services-section-heading"><div><span className="section-kicker">Ways I can help</span><h2 id="services-offerings-title">Choose the kind of support you need.</h2></div><p>You can start with a meeting or send a prepared message using the generator below.</p></div>
+        <div className="services-section-heading"><div><span className="section-kicker">Ways I can help</span><h2 id="services-offerings-title">Choose the kind of support you need.</h2></div><p>Pick a service, then open a pre-filled email or Telegram draft using your saved profile.</p></div>
         <div className="service-offer-grid">
           {SERVICE_OPTIONS.map(({ id, eyebrow, title, description, icon: Icon, accent }) => (
             <article className={`service-offer service-offer-${accent} soft-panel`} key={id}>
@@ -930,27 +880,28 @@ function ServicesPage({ notify }) {
               <span className="service-offer-eyebrow">{eyebrow}</span>
               <h3>{title}</h3>
               <p>{description}</p>
-              <button className="text-action service-offer-action" type="button" onClick={() => chooseService(id)}>Use a message template <ArrowRight size={16} /></button>
+              <button className="text-action service-offer-action" type="button" onClick={() => chooseService(id)}>Prepare outreach <ArrowRight size={16} /></button>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="template-studio soft-panel" id="template-studio" aria-labelledby="template-studio-title">
-        <div className="template-studio-heading"><div><span className="section-kicker">Copy-ready outreach</span><h2 id="template-studio-title">Generate the right first message.</h2><p>Pick a goal and a channel. Replace the bracketed prompts with your details, then send it.</p></div><span className="template-ready"><CheckCircle size={18} />Ready to copy</span></div>
-        <div className="template-studio-grid">
-          <div className="template-studio-sidebar">
-            <span className="template-label">What do you need?</span>
-            <div className="template-service-list" role="tablist" aria-label="Message template type">
-              {SERVICE_OPTIONS.map(({ id, label, eyebrow, icon: Icon, accent }) => <button className={`template-service-button ${serviceId === id ? "active" : ""}`} type="button" role="tab" aria-selected={serviceId === id} key={id} onClick={() => setServiceId(id)}><span className={`template-service-icon ${accent}`}><Icon size={21} weight="duotone" /></span><span><strong>{label}</strong><small>{eyebrow}</small></span><CaretRight size={18} /></button>)}
+      <section className="service-launch soft-panel" id="service-launch" aria-labelledby="service-launch-title">
+        <div className="service-launch-heading"><div><span className="section-kicker">Private profile, ready to use</span><h2 id="service-launch-title">Open a prepared request.</h2><p>Choose a channel and your saved profile details will be placed into a new draft. You review it before sending.</p></div><span className="service-launch-ready"><CheckCircle size={18} />Draft stays private</span></div>
+        <div className="service-launch-grid">
+          <div className="service-launch-selection">
+            <span className="service-launch-label">Selected support</span>
+            <div className={`service-launch-service service-launch-service-${selectedService.accent}`}>
+              <span className="service-launch-icon"><SelectedServiceIcon size={24} weight="duotone" /></span>
+              <span><strong>{selectedService.title}</strong><small>{selectedService.description}</small></span>
             </div>
-            <div className="template-channel-switch"><span className="template-label">Send it via</span><div className="segmented soft-inset"><button className={channel === "email" ? "active" : ""} type="button" onClick={() => setChannel("email")} aria-pressed={channel === "email"}><EnvelopeSimple size={17} />Email</button><button className={channel === "telegram" ? "active" : ""} type="button" onClick={() => setChannel("telegram")} aria-pressed={channel === "telegram"}><ChatCircleText size={17} />Telegram</button></div></div>
+            <div className="service-profile-summary"><span className="service-profile-summary-label"><UsersThree size={17} />Using your saved profile</span><div className="service-profile-pills">{profileFields.map(([label, value]) => <span key={label}><strong>{label}</strong>{value}</span>)}</div></div>
           </div>
-          <div className="template-preview">
-            <div className="template-preview-heading"><div><span>Generated {channel === "email" ? "email" : "Telegram message"}</span><h3>{selectedService.label}</h3></div><button className="secondary-button soft-button" type="button" onClick={copyTemplate}>{copied ? <Check size={18} /> : <Copy size={18} />}{copied ? "Copied" : "Copy template"}</button></div>
-            {channel === "email" ? <div className="template-email-meta"><div><span>To</span><strong>{CONTACT_EMAIL}</strong></div><div><span>Subject</span><strong>{selectedService.email.subject}</strong></div></div> : <div className="template-telegram-meta"><ChatCircleText size={20} /><span>To <strong>@{TELEGRAM_HANDLE}</strong></span></div>}
-            <textarea className="template-textarea" readOnly value={templateText} onFocus={(event) => event.currentTarget.select()} aria-label={`${selectedService.label} ${channel} template`} />
-            <div className="template-preview-footer"><span>Replace the text in [brackets] with your details. The copy button includes the email subject.</span>{channel === "email" ? <a className="text-action" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(selectedService.email.subject)}&body=${encodeURIComponent(selectedService.email.body)}`}>Open email <ArrowSquareOut size={16} /></a> : <a className="text-action" href={`https://t.me/${TELEGRAM_HANDLE}`} target="_blank" rel="noreferrer">Open Telegram <ArrowSquareOut size={16} /></a>}</div>
+          <div className="service-launch-actions">
+            <span className="service-launch-label">Choose where to continue</span>
+            <a className="primary-button service-launch-button" href={emailHref} onClick={() => announceOpen("email")}><EnvelopeSimple size={20} /><span><strong>Open email draft</strong><small>{CONTACT_EMAIL}</small></span><ArrowSquareOut size={17} /></a>
+            <a className="secondary-button soft-button service-launch-button" href={telegramHref} target="_blank" rel="noreferrer" onClick={() => announceOpen("Telegram")}><ChatCircleText size={20} /><span><strong>Open Telegram draft</strong><small>@{TELEGRAM_HANDLE}</small></span><ArrowSquareOut size={17} /></a>
+            <small className="service-launch-note">Nothing is sent automatically. Check the draft and press Send when it looks right.</small>
           </div>
         </div>
       </section>
