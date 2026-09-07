@@ -1518,6 +1518,67 @@ body {
   line-height: 1.55;
 }
 
+.services-pricing-note {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid rgba(85, 200, 189, 0.2);
+  border-radius: 17px;
+  padding: 13px 15px;
+  background: linear-gradient(105deg, rgba(169, 221, 212, 0.28), rgba(255, 255, 255, 0.48) 62%, rgba(244, 191, 69, 0.19));
+}
+
+.services-pricing-symbol {
+  display: grid;
+  width: 43px;
+  height: 43px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(244, 191, 69, 0.45);
+  color: #71500b;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-inset);
+}
+
+.services-pricing-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.services-pricing-copy strong {
+  color: var(--ink);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.services-pricing-copy small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.services-pricing-source {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  color: var(--teal-dark);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.services-pricing-source:hover {
+  color: var(--red);
+  text-decoration: underline;
+}
+
 .services-offerings {
   display: grid;
   gap: 16px;
@@ -1607,6 +1668,45 @@ body {
   font-size: 1.23rem;
   letter-spacing: -0.035em;
   line-height: 1.15;
+}
+
+.service-offer-price {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  margin: 1px 0;
+  border: 1px solid rgba(85, 200, 189, 0.18);
+  border-radius: 11px;
+  padding: 8px 10px;
+  background: rgba(169, 221, 212, 0.22);
+}
+
+.service-offer-price strong {
+  color: var(--teal-dark);
+  font-size: 0.94rem;
+  line-height: 1.2;
+}
+
+.service-offer-price small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.service-offer-price.is-free {
+  border-color: rgba(244, 191, 69, 0.3);
+  background: rgba(244, 191, 69, 0.18);
+}
+
+.service-offer-price.is-free strong {
+  color: #866019;
+}
+
+.service-offer-modifier {
+  color: #76530a;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
 .service-offer p {
@@ -1969,6 +2069,17 @@ body {
 }
 
 @media (max-width: 560px) {
+  .services-pricing-note {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .services-pricing-source {
+    grid-column: 2;
+    margin-left: 0;
+  }
+
   .services-page-actions { width: 100%; }
   .services-page-actions > * { flex: 1; }
   .services-hero { border-radius: 17px; padding: 21px; }
@@ -3307,6 +3418,16 @@ body,
   color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.5;
+}
+
+.service-launch-price {
+  display: block;
+  margin-top: 3px;
+  color: var(--teal-dark);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .service-profile-summary {
@@ -4742,6 +4863,46 @@ body,
 
 :root[data-theme="dark"] .kamiunity .services-community {
   background: linear-gradient(120deg, rgba(85, 200, 189, 0.11), rgba(244, 191, 69, 0.12));
+}
+
+:root[data-theme="dark"] .kamiunity .services-pricing-note {
+  border-color: rgba(85, 200, 189, 0.28);
+  background: linear-gradient(105deg, rgba(85, 200, 189, 0.14), rgba(35, 30, 50, 0.72) 62%, rgba(244, 191, 69, 0.12));
+}
+
+:root[data-theme="dark"] .kamiunity .services-pricing-symbol {
+  background: rgba(244, 191, 69, 0.2);
+  color: #ffe19a;
+}
+
+:root[data-theme="dark"] .kamiunity .services-pricing-copy strong,
+:root[data-theme="dark"] .kamiunity .service-offer-price strong {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .kamiunity .services-pricing-copy small,
+:root[data-theme="dark"] .kamiunity .service-offer-price small {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .kamiunity .services-pricing-source,
+:root[data-theme="dark"] .kamiunity .service-launch-price {
+  color: #9feee5;
+}
+
+:root[data-theme="dark"] .kamiunity .service-offer-price {
+  border-color: rgba(85, 200, 189, 0.28);
+  background: rgba(85, 200, 189, 0.12);
+}
+
+:root[data-theme="dark"] .kamiunity .service-offer-price.is-free {
+  border-color: rgba(244, 191, 69, 0.3);
+  background: rgba(244, 191, 69, 0.13);
+}
+
+:root[data-theme="dark"] .kamiunity .service-offer-price.is-free strong,
+:root[data-theme="dark"] .kamiunity .service-offer-modifier {
+  color: #ffe19a;
 }
 
 :root[data-theme="dark"] .kamiunity .template-ready,

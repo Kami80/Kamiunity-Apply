@@ -751,10 +751,29 @@ function DocumentsPage({ data, refresh, notify, openModal, navigate, theme }) {
 
 const CONTACT_EMAIL = "kamyabsafaie80@gmail.com";
 const TELEGRAM_HANDLE = "SafaeiKamyab";
+const BONBAST_EUR_RATE = {
+  sell: 260800,
+  buy: 260600,
+  checkedAt: "7 September 2026 · 09:17 UTC",
+  sourceUrl: "https://www.bonbast.com/?view=classic",
+};
 const COMMUNITY_LINKS = [
   { label: "Kamiunity Open Source", handle: "t.me/kamiunity_opensource", href: "https://t.me/kamiunity_opensource", description: "Build the tools together." },
   { label: "Apply Europe Iran", handle: "t.me/ApplyEuropeIran", href: "https://t.me/ApplyEuropeIran", description: "Application ideas and updates." },
 ];
+
+function formatToman(amount) {
+  return `${new Intl.NumberFormat("en-US").format(amount)} Toman`;
+}
+
+function paidServicePricing(baseEur) {
+  return {
+    baseEur,
+    baseToman: baseEur * BONBAST_EUR_RATE.sell,
+    modificationEur: 1,
+    modificationToman: BONBAST_EUR_RATE.sell,
+  };
+}
 
 const SERVICE_OPTIONS = [
   {
@@ -765,6 +784,7 @@ const SERVICE_OPTIONS = [
     description: "Talk through your goals, shortlist, timeline, or next move with a clear agenda.",
     icon: VideoCamera,
     accent: "peach",
+    pricing: { free: true },
   },
   {
     id: "resume",
@@ -774,6 +794,7 @@ const SERVICE_OPTIONS = [
     description: "Turn your experience, projects, and goals into a focused academic or professional CV.",
     icon: FileText,
     accent: "blue",
+    pricing: paidServicePricing(6),
   },
   {
     id: "sop",
@@ -783,6 +804,7 @@ const SERVICE_OPTIONS = [
     description: "Shape your story, evidence, and goals into a convincing statement for the right audience.",
     icon: Sparkle,
     accent: "amber",
+    pricing: paidServicePricing(7),
   },
   {
     id: "review",
@@ -792,6 +814,7 @@ const SERVICE_OPTIONS = [
     description: "Get a second look at your documents, fit, timeline, and next actions before you submit.",
     icon: UsersThree,
     accent: "sage",
+    pricing: { free: true },
   },
 ];
 
@@ -898,14 +921,25 @@ function ServicesPage({ data, notify }) {
         </aside>
       </section>
 
+      <section className="services-pricing-note soft-inset" aria-label="Pricing and exchange rate reference">
+        <span className="services-pricing-symbol" aria-hidden="true">€</span>
+        <div className="services-pricing-copy"><span className="section-kicker">Simple service pricing</span><strong>EUR prices stay fixed; Toman amounts use the Bonbast reference rate.</strong><small>1 EUR = {formatToman(BONBAST_EUR_RATE.sell)} sell · {formatToman(BONBAST_EUR_RATE.buy)} buy · checked {BONBAST_EUR_RATE.checkedAt}</small></div>
+        <a className="services-pricing-source" href={BONBAST_EUR_RATE.sourceUrl} target="_blank" rel="noreferrer">View Bonbast <ArrowSquareOut size={16} /></a>
+      </section>
+
       <section className="services-offerings" aria-labelledby="services-offerings-title">
         <div className="services-section-heading"><div><span className="section-kicker">Ways I can help</span><h2 id="services-offerings-title">Choose the kind of support you need.</h2></div><p>Pick a service, then open a pre-filled email or Telegram draft using your saved profile.</p></div>
         <div className="service-offer-grid">
-          {SERVICE_OPTIONS.map(({ id, eyebrow, title, description, icon: Icon, accent }) => (
+          {SERVICE_OPTIONS.map(({ id, eyebrow, title, description, icon: Icon, accent, pricing }) => (
             <article className={`service-offer service-offer-${accent} soft-panel`} key={id}>
               <span className="service-offer-icon"><Icon size={25} weight="duotone" /></span>
               <span className="service-offer-eyebrow">{eyebrow}</span>
               <h3>{title}</h3>
+              <div className={`service-offer-price${pricing.free ? " is-free" : ""}`}>
+                <strong>{pricing.free ? "Free" : `€${pricing.baseEur} basic`}</strong>
+                <small>{pricing.free ? "No charge" : `${formatToman(pricing.baseToman)} basic`}</small>
+              </div>
+              {!pricing.free ? <span className="service-offer-modifier">+ €{pricing.modificationEur} / program modification · + {formatToman(pricing.modificationToman)}</span> : null}
               <p>{description}</p>
               <button className="text-action service-offer-action" type="button" onClick={() => chooseService(id)}>Prepare outreach <ArrowRight size={16} /></button>
             </article>
@@ -920,7 +954,7 @@ function ServicesPage({ data, notify }) {
             <span className="service-launch-label">Selected support</span>
             <div className={`service-launch-service service-launch-service-${selectedService.accent}`}>
               <span className="service-launch-icon"><SelectedServiceIcon size={24} weight="duotone" /></span>
-              <span><strong>{selectedService.title}</strong><small>{selectedService.description}</small></span>
+              <span><strong>{selectedService.title}</strong><small>{selectedService.description}</small><em className="service-launch-price">{selectedService.pricing.free ? "Free" : `€${selectedService.pricing.baseEur} basic · ${formatToman(selectedService.pricing.baseToman)} basic`}{!selectedService.pricing.free ? ` · + €${selectedService.pricing.modificationEur} / program modification` : ""}</em></span>
             </div>
             <div className="service-profile-summary"><span className="service-profile-summary-label"><UsersThree size={17} />Using your saved profile</span><div className="service-profile-pills">{profileFields.map(([label, value]) => <span key={label}><strong>{label}</strong>{value}</span>)}</div></div>
           </div>
