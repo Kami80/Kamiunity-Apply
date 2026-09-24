@@ -1709,6 +1709,13 @@ body {
   line-height: 1.4;
 }
 
+.service-offer-note {
+  color: #286d67;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
 .service-offer p {
   margin: 0;
   color: var(--muted);
@@ -2108,7 +2115,7 @@ body {
   .community-link strong { font-size: 0.7rem; }
 }
 
-/* Profile identity and Google Form sync */
+/* Profile identity and local profile sync */
 .topbar-identity {
   display: flex;
   min-width: 0;
@@ -3566,6 +3573,19 @@ body,
   gap: 9px;
 }
 
+.profile-access-label {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  border: 1px solid rgba(244, 191, 69, 0.42);
+  border-radius: 13px;
+  padding: 0 13px;
+  background: rgba(244, 191, 69, 0.22);
+  color: #76530a;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .pwa-status-badge {
   display: inline-flex;
   min-height: 44px;
@@ -4210,6 +4230,12 @@ body,
   border-color: rgba(247, 184, 199, 0.4);
   background: rgba(247, 184, 199, 0.16);
   color: #ffb4c8;
+}
+
+:root[data-theme="dark"] .kamiunity .profile-access-label {
+  border-color: rgba(244, 191, 69, 0.38);
+  background: rgba(244, 191, 69, 0.14);
+  color: #ffe19a;
 }
 
 :root[data-theme="dark"] .kamiunity .profile-card-icon-peach,
@@ -4903,6 +4929,10 @@ body,
 :root[data-theme="dark"] .kamiunity .service-offer-price.is-free strong,
 :root[data-theme="dark"] .kamiunity .service-offer-modifier {
   color: #ffe19a;
+}
+
+:root[data-theme="dark"] .kamiunity .service-offer-note {
+  color: #9feee5;
 }
 
 :root[data-theme="dark"] .kamiunity .template-ready,

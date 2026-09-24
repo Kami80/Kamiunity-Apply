@@ -31,6 +31,12 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Use distinct navigation shells for desktop and mobile: a full desktop header and a five-item mobile bottom bar.
 - The mobile bar is icon-only and ordered left-to-right as Applications, Programs, Add document, Deadlines, and Document vault; keep a raised central Add document action.
 - Keep Backup & transfer as an icon-only utility in the upper-right of the mobile shell, and keep the primary date workspace focused on Deadlines.
-- Keep the application workspace locked until a matched Google Form profile is saved locally; Profile remains the setup route and unlocks the other pages after the first successful sync.
+- Keep the application workspace locked until a matched profile response is saved locally; Profile remains the setup route and unlocks the other pages after the first successful sync. Do not expose the profile form URL in the visible UI.
 - Use the active palette throughout the shell and all routes: yellow `#F4BF45`, mint `#A9DDD4`, pink `#F7B8C7`, and turquoise `#55C8BD`, with retro-vibrant accents, liquid-glass surfaces, and high-contrast dark text. Use darker derived tones only where the raw colors would reduce readability.
 - Treat dark mode as a designed midnight-plum workspace: layer charcoal glass surfaces with warm paper-colored type, preserve the yellow/mint/pink/turquoise identity as luminous accents, and use dedicated dark empty-state artwork instead of simply inverting the light illustrations.
+
+## Current services and pricing
+
+- The Services page currently offers Resume / CV building for €30, including a polished PDF, editable TeX source, and a session teaching the student how to edit the resume; SOP writing support for €30, beginning with a private background discussion; a combined Resume + SOP package for €50; and Application mentoring for €100 plus €50 for each additional friend or partner.
+- Mentoring copy should explain that the first meeting is free for evaluating the student’s situation, followed by one online session per month, an individual question group for the student and their friends or partners, and access to a private community of students mentored by the same person who may share destinations, application partners, and relevant meetings.
+- The locked profile page should say “Full access with mentoring package” and the Mentoring package should explicitly include full access to the Apply Application workspace.

@@ -31,7 +31,6 @@ import {
   Trash,
   UploadSimple,
   UsersThree,
-  VideoCamera,
   WarningCircle,
   X,
 } from "@phosphor-icons/react";
@@ -50,7 +49,7 @@ import { ApplicationForm, DocumentForm, ExternalLink, ProgramForm, TaskForm } fr
 import { catalogToProgram, importCatalogCsv, programKey, replaceCatalog, syncCatalogFromUrl } from "./catalog.js";
 import { CATALOG_AUTO_SYNC_SETTING_KEY, DEFAULT_CATALOG_SOURCE, SHARED_CATALOG_SOURCE, STARTER_CATALOG } from "./catalog-data.js";
 import { POLIMI_CATALOG } from "./polimi-data.js";
-import { fetchProfileSheet, findProfileByEmail, normalizeProfileEmail, PROFILE_FORM_URL } from "./profile.js";
+import { fetchProfileSheet, findProfileByEmail, normalizeProfileEmail } from "./profile.js";
 import { applicationDocuments, deadlineEvents, saveProgram, STATUS_OPTIONS } from "./workflow.js";
 import { isPolitecnicoDiMilano } from "./program-taxonomy.js";
 import {
@@ -766,57 +765,75 @@ function formatToman(amount) {
   return `${new Intl.NumberFormat("en-US").format(amount)} Toman`;
 }
 
-function paidServicePricing(baseEur) {
+function fixedServicePricing(baseEur) {
   return {
     baseEur,
     baseToman: baseEur * BONBAST_EUR_RATE.sell,
-    modificationEur: 1,
-    modificationToman: BONBAST_EUR_RATE.sell,
+  };
+}
+
+function mentoringServicePricing(baseEur, additionalEur) {
+  return {
+    ...fixedServicePricing(baseEur),
+    additionalEur,
+    additionalToman: additionalEur * BONBAST_EUR_RATE.sell,
   };
 }
 
 const SERVICE_OPTIONS = [
   {
-    id: "meeting",
-    label: "Have a meeting",
-    eyebrow: "1:1 application guidance",
-    title: "Application planning meeting",
-    description: "Talk through your goals, shortlist, timeline, or next move with a clear agenda.",
-    icon: VideoCamera,
-    accent: "peach",
-    pricing: { free: true },
-  },
-  {
     id: "resume",
-    label: "Build a resume",
-    eyebrow: "CV and profile storytelling",
+    label: "Build my resume / CV",
+    eyebrow: "Resume package",
     title: "Resume / CV building",
-    description: "Turn your experience, projects, and goals into a focused academic or professional CV.",
+    description: "Receive a polished PDF, an editable TeX file, and a practical session that teaches you how to edit and adapt your resume with confidence.",
     icon: FileText,
     accent: "blue",
-    pricing: paidServicePricing(6),
+    pricing: fixedServicePricing(30),
   },
   {
     id: "sop",
-    label: "Write a motivation letter / SOP",
+    label: "Write my SOP",
     eyebrow: "Personal statement support",
-    title: "Motivation letter / SOP",
-    description: "Shape your story, evidence, and goals into a convincing statement for the right audience.",
+    title: "SOP writing support",
+    description: "Have a private conversation about your background, experience, and goals so your SOP can tell a clearer, more convincing story.",
     icon: Sparkle,
     accent: "amber",
-    pricing: paidServicePricing(7),
+    pricing: fixedServicePricing(30),
   },
   {
-    id: "review",
-    label: "Review my application",
-    eyebrow: "Application package check",
-    title: "Application package review",
-    description: "Get a second look at your documents, fit, timeline, and next actions before you submit.",
-    icon: UsersThree,
+    id: "package",
+    label: "Prepare my resume + SOP",
+    eyebrow: "Complete writing package",
+    title: "Resume + SOP package",
+    description: "Get both core application documents prepared together: a polished PDF and editable TeX resume, plus an SOP shaped around your background and target programs.",
+    icon: FolderSimple,
     accent: "sage",
-    pricing: { free: true },
+    pricing: fixedServicePricing(50),
+  },
+  {
+    id: "mentoring",
+    label: "Join application mentoring",
+    eyebrow: "Ongoing application guidance",
+    title: "Application mentoring",
+    description: "Your first meeting is free so we can understand your situation. The package includes full access to the Apply Application workspace, one online session each month, a dedicated group for your questions, and a private community where you can meet students I mentor with similar destinations, find application partners, and join relevant meetings.",
+    icon: UsersThree,
+    accent: "peach",
+    pricing: { ...mentoringServicePricing(100, 50), firstMeetingFree: true, includesFullAccess: true },
   },
 ];
+
+function servicePriceSummary(pricing) {
+  const base = `€${pricing.baseEur} · ${formatToman(pricing.baseToman)}`;
+  return pricing.additionalEur
+    ? `${base}; + €${pricing.additionalEur} · ${formatToman(pricing.additionalToman)} for each additional friend or partner`
+    : base;
+}
+
+function servicePriceFor(serviceId) {
+  const service = SERVICE_OPTIONS.find((option) => option.id === serviceId);
+  return servicePriceSummary(service.pricing);
+}
 
 function profileContactValue(profile, key, fallback) {
   const value = String(profile?.[key] || "").trim();
@@ -848,29 +865,29 @@ function buildServiceDraft(serviceId, profile) {
   const contactLine = profile?.email ? `You can also reach me at ${profile.email}.` : "I can share my contact details in the conversation.";
 
   const drafts = {
-    meeting: {
-      subject: `Meeting request — ${name}`,
-      emailBody: `Hi Kamyab,\n\nMy name is ${name}, and I’d like to book a meeting about my graduate application.\n\nMy saved profile details:\n${profileSummary}\n\nI’d like help with my application plan, shortlist, timeline, or next steps. Please let me know your available times.\n\n${contactLine}\n\nThank you,\n${name}`,
-      telegramBody: `Hi Kamyab! I’d like to book a meeting about my graduate application.\n\n${profileSummaryShort || `Name: ${name}`}\n\nI’d like help with my application plan, shortlist, timeline, or next steps. Please let me know your available times.`,
-    },
     resume: {
-      subject: `Resume / CV building request — ${name}`,
-      emailBody: `Hi Kamyab,\n\nI’d like help building or improving my resume/CV.\n\nMy saved profile details:\n${profileSummary}\n\nI’d like to shape my experience for my graduate application. I can share my current CV and supporting links. Please let me know what I should send first.\n\nBest,\n${name}`,
-      telegramBody: `Hi Kamyab! I’d like help building or improving my resume/CV.\n\n${profileSummaryShort || `Name: ${name}`}\n\nI can send my current CV and supporting links. What should I share first?`,
+      subject: `Resume / CV package request — ${name}`,
+      emailBody: `Hi Kamyab,\n\nI’d like to request the Resume / CV package (${servicePriceFor("resume")}).\n\nMy saved profile details:\n${profileSummary}\n\nI understand the package includes a polished PDF, an editable TeX file, and a practical session to teach me how to edit and adapt my resume for future applications. I can share my current resume, experience details, and target programs.\n\n${contactLine}\n\nBest,\n${name}`,
+      telegramBody: `Hi Kamyab! I’m interested in the Resume / CV package (${servicePriceFor("resume")}).\n\n${profileSummaryShort || `Name: ${name}`}\n\nI understand it includes a polished PDF, an editable TeX file, and a session to teach me how to edit my resume. What should I send first?`,
     },
     sop: {
-      subject: `Motivation letter / SOP support — ${name}`,
-      emailBody: `Hi Kamyab,\n\nI’d like help with a motivation letter or SOP for my graduate application.\n\nMy saved profile details:\n${profileSummary}\n\nI can share the program prompt, word limit, notes, or current draft. I’d appreciate help with the structure, clarity, and positioning of my story.\n\nBest,\n${name}`,
-      telegramBody: `Hi Kamyab! I’d like help with a motivation letter or SOP for my graduate application.\n\n${profileSummaryShort || `Name: ${name}`}\n\nI can send the program prompt, my notes, or a current draft. What should I share first?`,
+      subject: `SOP writing support request — ${name}`,
+      emailBody: `Hi Kamyab,\n\nI’d like to request SOP writing support (${servicePriceFor("sop")}).\n\nMy saved profile details:\n${profileSummary}\n\nI understand the service begins with a private session to discuss my background, experience, and goals. I can share the target program, prompt, word limit, notes, or an existing draft so we can build a more personal and convincing SOP.\n\nBest,\n${name}`,
+      telegramBody: `Hi Kamyab! I’m interested in SOP writing support (${servicePriceFor("sop")}).\n\n${profileSummaryShort || `Name: ${name}`}\n\nI understand we’ll begin with a private conversation about my background and goals. I can send the program prompt, my notes, or a current draft.`,
     },
-    review: {
-      subject: `Application package review — ${name}`,
-      emailBody: `Hi Kamyab,\n\nI’d like a review of my graduate application package.\n\nMy saved profile details:\n${profileSummary}\n\nI can share the program link and my documents. I’d appreciate a second look at fit, missing pieces, clarity, timeline, and submission requirements. Please let me know how we can start.\n\nBest,\n${name}`,
-      telegramBody: `Hi Kamyab! I’d like a review of my graduate application package.\n\n${profileSummaryShort || `Name: ${name}`}\n\nI can send the program link and my documents. I’d appreciate help with fit, missing pieces, clarity, or timeline.`,
+    package: {
+      subject: `Resume + SOP package request — ${name}`,
+      emailBody: `Hi Kamyab,\n\nI’d like to request the Resume + SOP package (${servicePriceFor("package")}).\n\nMy saved profile details:\n${profileSummary}\n\nI’d like both my resume and SOP prepared as a coordinated application package, with the documents shaped around my background and target programs. I can share my current materials, program links, and any application prompts.\n\nBest,\n${name}`,
+      telegramBody: `Hi Kamyab! I’m interested in the Resume + SOP package (${servicePriceFor("package")}).\n\n${profileSummaryShort || `Name: ${name}`}\n\nI’d like both documents prepared as one coordinated application package. What should I send first?`,
+    },
+    mentoring: {
+      subject: `Application mentoring request — ${name}`,
+      emailBody: `Hi Kamyab,\n\nI’m interested in the application mentoring package (${servicePriceFor("mentoring")}).\n\nMy saved profile details:\n${profileSummary}\n\nI understand that the first meeting is free so we can evaluate my situation. The package includes full access to the Apply Application workspace, one online session each month, an individual group for me and my friends or partners to ask questions, and access to a private group with other students you mentor who have similar destinations. I’d also appreciate the chance to connect with potential application partners and relevant meetings.\n\n${contactLine}\n\nBest,\n${name}`,
+      telegramBody: `Hi Kamyab! I’m interested in the application mentoring package (${servicePriceFor("mentoring")}).\n\n${profileSummaryShort || `Name: ${name}`}\n\nI understand the first meeting is free to evaluate my situation. The package includes full access to the Apply Application workspace, one online session each month, a private question group for me and my friends or partners, and access to a community of students you mentor with similar destinations.`,
     },
   };
 
-  return drafts[serviceId] || drafts.meeting;
+  return drafts[serviceId] || drafts.resume;
 }
 
 function ServicesPage({ data, notify }) {
@@ -895,66 +912,67 @@ function ServicesPage({ data, notify }) {
   return (
     <div className="page services-page">
       <PageHeader
-        eyebrow="People behind the paperwork"
+        eyebrow="Support for the work behind your applications"
         title="Services & contact"
-        description="Bring the question, draft, or half-finished idea. We can turn it into a clear next step."
+        description="Choose the level of support that fits your application journey, then send a private request with your saved profile details already prepared."
         localMessage="Direct contact · no form required"
         action={<div className="services-page-actions"><a className="primary-button" href={emailHref} onClick={() => announceOpen("email")}><EnvelopeSimple size={19} />Email this request</a><a className="secondary-button soft-button" href={telegramHref} target="_blank" rel="noreferrer" onClick={() => announceOpen("Telegram")}><ChatCircleText size={19} />Telegram this request</a></div>}
       />
 
       <section className="services-hero soft-panel" aria-labelledby="services-hero-title">
         <div className="services-hero-copy">
-          <span className="section-kicker">A little help, right when it matters</span>
-          <h2 id="services-hero-title">Make your application feel more like a plan.</h2>
-          <p>Whether you need a focused meeting, a stronger resume, or a thoughtful motivation letter, start with a short message and we’ll figure out the right next step together.</p>
-          <div className="services-hero-points"><span><CheckCircle size={18} />Practical, student-focused support</span><span><CheckCircle size={18} />Clear drafts and next actions</span></div>
+          <span className="section-kicker">Support that moves your application forward</span>
+          <h2 id="services-hero-title">Build stronger applications with a clearer plan.</h2>
+          <p>From a polished resume and a personal SOP to ongoing mentorship, choose the support that matches your goals. We’ll turn your background, questions, and next steps into focused progress.</p>
+          <div className="services-hero-points"><span><CheckCircle size={18} />Practical, student-centered guidance</span><span><CheckCircle size={18} />Clear deliverables and next steps</span><span><CheckCircle size={18} />Private, thoughtful conversations</span></div>
         </div>
         <aside className="services-contact-card">
           <span className="services-contact-stamp"><Sparkle size={26} weight="duotone" /></span>
           <span className="section-kicker">Reach out directly</span>
-          <h3>Let’s work on the next piece together.</h3>
+          <h3>Let’s build your next application step together.</h3>
           <div className="services-contact-links">
             <a className="services-contact-link" href={emailHref} onClick={() => announceOpen("email")}><span className="services-contact-link-icon"><EnvelopeSimple size={19} /></span><span><small>Email · {selectedService.label}</small><strong>{CONTACT_EMAIL}</strong></span><ArrowSquareOut size={17} /></a>
             <a className="services-contact-link" href={telegramHref} target="_blank" rel="noreferrer" onClick={() => announceOpen("Telegram")}><span className="services-contact-link-icon"><ChatCircleText size={19} /></span><span><small>Telegram · {selectedService.label}</small><strong>@{TELEGRAM_HANDLE}</strong></span><ArrowSquareOut size={17} /></a>
           </div>
-          <small className="services-contact-note">Your saved profile details are added to the draft automatically.</small>
+          <small className="services-contact-note">Your saved profile details are added automatically, so you can review the request before sending it.</small>
         </aside>
       </section>
 
       <section className="services-pricing-note soft-inset" aria-label="Pricing and exchange rate reference">
         <span className="services-pricing-symbol" aria-hidden="true">€</span>
-        <div className="services-pricing-copy"><span className="section-kicker">Simple service pricing</span><strong>EUR prices stay fixed; Toman amounts use the Bonbast reference rate.</strong><small>1 EUR = {formatToman(BONBAST_EUR_RATE.sell)} sell · {formatToman(BONBAST_EUR_RATE.buy)} buy · checked {BONBAST_EUR_RATE.checkedAt}</small></div>
+        <div className="services-pricing-copy"><span className="section-kicker">Simple service pricing</span><strong>Prices are listed in EUR; Toman amounts are estimates based on the Bonbast reference rate.</strong><small>1 EUR = {formatToman(BONBAST_EUR_RATE.sell)} sell · {formatToman(BONBAST_EUR_RATE.buy)} buy · checked {BONBAST_EUR_RATE.checkedAt}</small></div>
         <a className="services-pricing-source" href={BONBAST_EUR_RATE.sourceUrl} target="_blank" rel="noreferrer">View Bonbast <ArrowSquareOut size={16} /></a>
       </section>
 
       <section className="services-offerings" aria-labelledby="services-offerings-title">
-        <div className="services-section-heading"><div><span className="section-kicker">Ways I can help</span><h2 id="services-offerings-title">Choose the kind of support you need.</h2></div><p>Pick a service, then open a pre-filled email or Telegram draft using your saved profile.</p></div>
+        <div className="services-section-heading"><div><span className="section-kicker">Ways I can help</span><h2 id="services-offerings-title">Choose the support that fits your application.</h2></div><p>Compare the deliverables, then prepare a private email or Telegram request using your saved profile.</p></div>
         <div className="service-offer-grid">
           {SERVICE_OPTIONS.map(({ id, eyebrow, title, description, icon: Icon, accent, pricing }) => (
             <article className={`service-offer service-offer-${accent} soft-panel`} key={id}>
               <span className="service-offer-icon"><Icon size={25} weight="duotone" /></span>
               <span className="service-offer-eyebrow">{eyebrow}</span>
               <h3>{title}</h3>
-              <div className={`service-offer-price${pricing.free ? " is-free" : ""}`}>
-                <strong>{pricing.free ? "Free" : `€${pricing.baseEur} basic`}</strong>
-                <small>{pricing.free ? "No charge" : `${formatToman(pricing.baseToman)} basic`}</small>
+              <div className="service-offer-price">
+                <strong>€{pricing.baseEur}</strong>
+                <small>{formatToman(pricing.baseToman)}</small>
               </div>
-              {!pricing.free ? <span className="service-offer-modifier">+ €{pricing.modificationEur} / program modification · + {formatToman(pricing.modificationToman)}</span> : null}
+              {pricing.additionalEur ? <span className="service-offer-modifier">+ €{pricing.additionalEur} / additional friend or partner · + {formatToman(pricing.additionalToman)} each</span> : null}
+              {pricing.firstMeetingFree ? <span className="service-offer-note">First meeting free to evaluate your situation.</span> : null}
               <p>{description}</p>
-              <button className="text-action service-offer-action" type="button" onClick={() => chooseService(id)}>Prepare outreach <ArrowRight size={16} /></button>
+              <button className="text-action service-offer-action" type="button" onClick={() => chooseService(id)}>Prepare a request <ArrowRight size={16} /></button>
             </article>
           ))}
         </div>
       </section>
 
       <section className="service-launch soft-panel" id="service-launch" aria-labelledby="service-launch-title">
-        <div className="service-launch-heading"><div><span className="section-kicker">Private profile, ready to use</span><h2 id="service-launch-title">Open a prepared request.</h2><p>Choose a channel and your saved profile details will be placed into a new draft. You review it before sending.</p></div><span className="service-launch-ready"><CheckCircle size={18} />Draft stays private</span></div>
+        <div className="service-launch-heading"><div><span className="section-kicker">Private profile, ready to use</span><h2 id="service-launch-title">Start the conversation with context.</h2><p>Choose a channel and your saved profile details will be placed into a clear, specific request. You can review every detail before sending.</p></div><span className="service-launch-ready"><CheckCircle size={18} />Draft stays private</span></div>
         <div className="service-launch-grid">
           <div className="service-launch-selection">
             <span className="service-launch-label">Selected support</span>
             <div className={`service-launch-service service-launch-service-${selectedService.accent}`}>
               <span className="service-launch-icon"><SelectedServiceIcon size={24} weight="duotone" /></span>
-              <span><strong>{selectedService.title}</strong><small>{selectedService.description}</small><em className="service-launch-price">{selectedService.pricing.free ? "Free" : `€${selectedService.pricing.baseEur} basic · ${formatToman(selectedService.pricing.baseToman)} basic`}{!selectedService.pricing.free ? ` · + €${selectedService.pricing.modificationEur} / program modification` : ""}</em></span>
+              <span><strong>{selectedService.title}</strong><small>{selectedService.description}</small><em className="service-launch-price">{servicePriceSummary(selectedService.pricing)}</em></span>
             </div>
             <div className="service-profile-summary"><span className="service-profile-summary-label"><UsersThree size={17} />Using your saved profile</span><div className="service-profile-pills">{profileFields.map(([label, value]) => <span key={label}><strong>{label}</strong>{value}</span>)}</div></div>
           </div>
@@ -962,7 +980,7 @@ function ServicesPage({ data, notify }) {
             <span className="service-launch-label">Choose where to continue</span>
             <a className="primary-button service-launch-button" href={emailHref} onClick={() => announceOpen("email")}><EnvelopeSimple size={20} /><span><strong>Open email draft</strong><small>{CONTACT_EMAIL}</small></span><ArrowSquareOut size={17} /></a>
             <a className="secondary-button soft-button service-launch-button" href={telegramHref} target="_blank" rel="noreferrer" onClick={() => announceOpen("Telegram")}><ChatCircleText size={20} /><span><strong>Open Telegram draft</strong><small>@{TELEGRAM_HANDLE}</small></span><ArrowSquareOut size={17} /></a>
-            <small className="service-launch-note">Nothing is sent automatically. Check the draft and press Send when it looks right.</small>
+            <small className="service-launch-note">Nothing is sent automatically. Check the draft, add anything else you want to mention, and press Send when it looks right.</small>
           </div>
         </div>
       </section>
@@ -1005,7 +1023,7 @@ function ProfilePage({ data, refresh, notify, locked = false, installPrompt, ins
     const targetEmail = normalizeProfileEmail(inputEmail);
     if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
       if (!silent) {
-        setError("Enter the same email address used when submitting the Google Form.");
+        setError("Enter the email address connected to your saved profile.");
         setStatus("");
       }
       return false;
@@ -1027,11 +1045,11 @@ function ProfilePage({ data, refresh, notify, locked = false, installPrompt, ins
           await db.settings.delete(PROFILE_SETTING_KEY);
           await refresh();
           setShowEmailEditor(true);
-          setStatus(`No profile response matched ${targetEmail}. Submit the form first, then sync again.`);
+          setStatus(`No profile response matched ${targetEmail}. Make sure your profile has been submitted, then sync again.`);
         }
         return false;
       }
-      await db.settings.put({ key: PROFILE_SETTING_KEY, value: { ...match, email: targetEmail, source: "Google Form response sheet", syncedAt: new Date().toISOString() } });
+      await db.settings.put({ key: PROFILE_SETTING_KEY, value: { ...match, email: targetEmail, source: "Profile response sheet", syncedAt: new Date().toISOString() } });
       await refresh();
       setEmail(targetEmail);
       setShowEmailEditor(false);
@@ -1069,21 +1087,6 @@ function ProfilePage({ data, refresh, notify, locked = false, installPrompt, ins
     await syncProfileByEmail(email || data.profile?.email || data.profileLookupEmail);
   }
 
-  async function openProfileForm() {
-    const targetEmail = normalizeProfileEmail(email || data.profile?.email || data.profileLookupEmail);
-    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
-      setError("Enter your email once before opening the Google Form.");
-      setStatus("");
-      return;
-    }
-    // Open in the click handler before awaiting IndexedDB so popup blockers do
-    // not mistake the form tab for an unsolicited window.
-    window.open(PROFILE_FORM_URL, "_blank", "noopener,noreferrer");
-    await db.settings.put({ key: PROFILE_LOOKUP_EMAIL_SETTING_KEY, value: targetEmail });
-    setEmail(targetEmail);
-    await refresh();
-  }
-
   async function clearProfile() {
     await db.settings.delete(PROFILE_SETTING_KEY);
     await db.settings.delete(PROFILE_LOOKUP_EMAIL_SETTING_KEY);
@@ -1091,7 +1094,7 @@ function ProfilePage({ data, refresh, notify, locked = false, installPrompt, ins
     autoSyncEmail.current = "";
     setEmail("");
     setShowEmailEditor(true);
-    setStatus("The local profile has been cleared. Your Google Form response was not changed.");
+    setStatus("The local profile has been cleared. Your saved profile response was not changed.");
     setError("");
   }
 
@@ -1100,30 +1103,30 @@ function ProfilePage({ data, refresh, notify, locked = false, installPrompt, ins
     <div className="page profile-page">
       <PageHeader
         eyebrow="Your personal application identity"
-        title={profileReady ? profile.fullName : "Unlock your workspace"}
-        description={locked ? "Create your profile through the Google Form, then sync it once to unlock programs, applications, deadlines, documents, and services." : profileReady ? "Your connected profile is restored from this browser and can be refreshed whenever your details change." : "Keep your academic background in one place and refresh it from your Google Form whenever something changes."}
+        title={profileReady ? profile.fullName : "Full access with mentoring package"}
+        description={locked ? "Full access with mentoring package. Connect your saved profile to unlock the complete Apply Application workspace on this device." : profileReady ? "Your connected profile is restored from this browser and can be refreshed whenever your details change." : "Use the email connected to your saved profile to refresh your local application workspace."}
         localMessage={profileReady && profile.syncedAt ? `Synced ${formatCatalogTimestamp(profile.syncedAt)}` : "Stored only on this device"}
-        action={<div className="profile-header-actions"><button className="primary-button" type="button" onClick={openProfileForm}><ArrowSquareOut size={19} />Open Google Form</button>{installed ? <span className="pwa-status-badge"><CheckCircle size={18} />Installed</span> : installPrompt ? <button className="secondary-button soft-button" type="button" onClick={installApp}><DownloadSimple size={19} />Install app</button> : null}</div>}
+        action={<div className="profile-header-actions">{locked ? <span className="profile-access-label">Full access with mentoring package</span> : null}{installed ? <span className="pwa-status-badge"><CheckCircle size={18} />Installed</span> : installPrompt ? <button className="secondary-button soft-button" type="button" onClick={installApp}><DownloadSimple size={19} />Install app</button> : null}</div>}
       />
 
-      {locked ? <div className="profile-access-gate soft-inset" role="status"><span className="profile-access-gate-icon"><WarningCircle size={22} weight="duotone" /></span><div><strong>Complete your profile to unlock Kamiunity.</strong><p>Submit the form, return here, and sync the response. Your matched profile will unlock the rest of the app on this browser.</p></div></div> : null}
+      {locked ? <div className="profile-access-gate soft-inset" role="status"><span className="profile-access-gate-icon"><WarningCircle size={22} weight="duotone" /></span><div><strong>Full access with mentoring package.</strong><p>The complete Apply Application workspace is included with the mentoring package. Enter the email connected to your saved profile below to sync access on this device.</p></div></div> : null}
 
       <section className="profile-hero soft-panel" aria-labelledby="profile-hero-title">
-        <div className="profile-hero-identity"><span className="profile-large-avatar" aria-hidden="true">{profileInitials(profile)}</span><div><span className="section-kicker">Your profile card</span><h2 id="profile-hero-title">{name}</h2><p>{profileReady ? "This is the profile currently matched to your form response on this browser." : savedEmail ? "Your email is remembered on this browser. Submit the form, then refresh the saved connection." : "Submit the short form, then enter your form email below to bring your details into Kamiunity."}</p></div></div>
+        <div className="profile-hero-identity"><span className="profile-large-avatar" aria-hidden="true">{profileInitials(profile)}</span><div><span className="section-kicker">Your profile card</span><h2 id="profile-hero-title">{name}</h2><p>{profileReady ? "This is the profile currently matched to your saved response on this browser." : savedEmail ? "Your email is remembered on this browser. Sync again whenever your saved profile changes." : "Enter the email connected to your saved profile to bring your details into Kamiunity."}</p></div></div>
         <div className={`profile-sync-badge ${profileReady ? "is-synced" : ""}`}><CheckCircle size={20} />{profileReady ? "Workspace unlocked" : "Profile setup required"}</div>
       </section>
 
       <div className="profile-grid">
         <section className="profile-sync-card soft-panel" aria-labelledby="profile-sync-title">
-          <div className="profile-card-heading"><span className="profile-card-icon profile-card-icon-peach"><Sparkle size={23} weight="duotone" /></span><div><span className="section-kicker">Google Form sync</span><h2 id="profile-sync-title">Update your profile</h2></div></div>
-          <p>{savedEmail ? "Your email is saved on this browser, so you do not need to enter it again. Open the form when you need to change your details, then refresh the connection." : locked ? "Open the form, submit your details, then sync the response. Once a matched profile is found, the rest of Kamiunity unlocks immediately." : "Open the form, submit your details, then sync the response using the same email. Kamiunity remembers the connection locally on this browser."}</p>
+          <div className="profile-card-heading"><span className="profile-card-icon profile-card-icon-peach"><Sparkle size={23} weight="duotone" /></span><div><span className="section-kicker">Local profile connection</span><h2 id="profile-sync-title">Connect your profile</h2></div></div>
+          <p>{savedEmail ? "Your email is saved on this browser, so you do not need to enter it again. Sync whenever you want to refresh your local connection." : locked ? "Enter the email connected to your saved profile, then sync the response. Once a match is found, the rest of Kamiunity unlocks immediately." : "Enter the email connected to your saved profile and sync it to this browser. Kamiunity remembers the connection locally."}</p>
           {!showEmailEditor && savedEmail ? <div className="profile-connected-state">
             <div className="profile-connected-summary"><span className="profile-connected-icon"><CheckCircle size={22} weight="duotone" /></span><div><span className="section-kicker">{profileReady ? "Connected on this browser" : "Email saved on this browser"}</span><strong>{savedEmail}</strong><small>{profileReady ? "Your profile is restored automatically when you return." : "Refresh after submitting the form to find your profile."}</small></div></div>
             <div className="profile-form-actions"><button className="primary-button" type="button" onClick={() => syncProfileByEmail(savedEmail)} disabled={busy}>{busy ? "Refreshing…" : "Refresh profile"}<ArrowRight size={18} /></button><button className="secondary-button soft-button" type="button" onClick={() => { setShowEmailEditor(true); setError(""); setStatus(""); }}>Change email</button></div>
           </div> : <form className="profile-sync-form" onSubmit={syncProfile}>
-            <label className="profile-email-field"><span>Email used in the Google Form</span><input className="soft-inset" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" /></label>
-            <small className="profile-form-hint">Enable “Collect email addresses” in Google Forms so each response can be matched safely.</small>
-            <div className="profile-form-actions"><button className="secondary-button soft-button" type="button" onClick={openProfileForm}><ArrowSquareOut size={18} />Open form first</button><button className="primary-button" type="submit" disabled={busy}>{busy ? "Syncing…" : "Save and sync profile"}<ArrowRight size={18} /></button></div>
+            <label className="profile-email-field"><span>Email connected to your saved profile</span><input className="soft-inset" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" /></label>
+            <small className="profile-form-hint">Use the same email address associated with your saved profile so your response can be matched safely.</small>
+            <div className="profile-form-actions"><button className="primary-button" type="submit" disabled={busy}>{busy ? "Syncing…" : "Save and sync profile"}<ArrowRight size={18} /></button></div>
           </form>}
           {error ? <div className="profile-notice profile-notice-error" role="alert"><WarningCircle size={19} />{error}</div> : null}
           {status ? <div className="profile-notice profile-notice-status" role="status"><CheckCircle size={19} />{status}</div> : null}

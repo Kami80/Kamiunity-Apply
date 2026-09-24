@@ -1,6 +1,5 @@
 import { parseCsv } from "./catalog.js";
 
-export const PROFILE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeV74XBx562DqS_2IUs7E_ckFOlgbGzX6eiZ7oLoi1GvZI7IA/viewform?usp=dialog";
 export const PROFILE_SHEET_URL = "https://docs.google.com/spreadsheets/d/18szMfitTrSodicxwEO4Wi5rJa_P0nPza6dvwwdDb-SA/edit?usp=sharing";
 export const PROFILE_SHEET_ID = "18szMfitTrSodicxwEO4Wi5rJa_P0nPza6dvwwdDb-SA";
 export const PROFILE_SHEET_GID = "802126866";
@@ -104,7 +103,7 @@ export async function fetchProfileSheet() {
       const parsed = parseProfileSheet(await response.text(), source.format);
       if (!parsed.headers.length) throw new Error("The profile sheet is empty or unavailable.");
       if (!parsed.hasEmailColumn) {
-        throw new Error("Add an Email column by enabling Collect email addresses in the Google Form, then try again.");
+        throw new Error("Add an Email column to the profile response sheet so each student can be matched safely, then try again.");
       }
       return { ...parsed, sourceUrl: source.url };
     } catch (error) {
