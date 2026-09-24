@@ -1681,6 +1681,18 @@ body {
   background: rgba(169, 221, 212, 0.22);
 }
 
+.service-offer-discount {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: rgba(247, 184, 199, 0.62);
+  color: #963c5b;
+  font-size: 0.58rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .service-offer-price strong {
   color: var(--teal-dark);
   font-size: 0.94rem;
@@ -1706,6 +1718,12 @@ body {
   color: #76530a;
   font-size: 0.65rem;
   font-weight: 800;
+  line-height: 1.4;
+}
+
+.service-offer-regular {
+  color: var(--muted);
+  font-size: 0.63rem;
   line-height: 1.4;
 }
 
@@ -3437,6 +3455,14 @@ body,
   line-height: 1.45;
 }
 
+.service-launch-discount {
+  display: block;
+  color: #963c5b;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
 .service-profile-summary {
   display: grid;
   gap: 10px;
@@ -4919,6 +4945,19 @@ body,
 :root[data-theme="dark"] .kamiunity .service-offer-price {
   border-color: rgba(85, 200, 189, 0.28);
   background: rgba(85, 200, 189, 0.12);
+}
+
+:root[data-theme="dark"] .kamiunity .service-offer-discount {
+  background: rgba(247, 184, 199, 0.18);
+  color: #ffb8c9;
+}
+
+:root[data-theme="dark"] .kamiunity .service-offer-regular {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .kamiunity .service-launch-discount {
+  color: #ffb8c9;
 }
 
 :root[data-theme="dark"] .kamiunity .service-offer-price.is-free {

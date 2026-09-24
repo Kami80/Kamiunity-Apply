@@ -772,11 +772,16 @@ function fixedServicePricing(baseEur) {
   };
 }
 
-function mentoringServicePricing(baseEur, additionalEur) {
+function mentoringServicePricing(baseEur, additionalEur, regularBaseEur = baseEur, regularAdditionalEur = additionalEur) {
   return {
     ...fixedServicePricing(baseEur),
     additionalEur,
     additionalToman: additionalEur * BONBAST_EUR_RATE.sell,
+    regularBaseEur,
+    regularBaseToman: regularBaseEur * BONBAST_EUR_RATE.sell,
+    regularAdditionalEur,
+    regularAdditionalToman: regularAdditionalEur * BONBAST_EUR_RATE.sell,
+    discountPercent: Math.round((1 - (baseEur / regularBaseEur)) * 100),
   };
 }
 
@@ -819,7 +824,7 @@ const SERVICE_OPTIONS = [
     description: "Your first meeting is free so we can understand your situation. The package includes full access to the Apply Application workspace, one online session each month, a dedicated group for your questions, and a private community where you can meet students I mentor with similar destinations, find application partners, and join relevant meetings.",
     icon: UsersThree,
     accent: "peach",
-    pricing: { ...mentoringServicePricing(100, 50), firstMeetingFree: true, includesFullAccess: true },
+    pricing: { ...mentoringServicePricing(100, 50, 200, 100), firstMeetingFree: true, includesFullAccess: true },
   },
 ];
 
@@ -830,9 +835,22 @@ function servicePriceSummary(pricing) {
     : base;
 }
 
+function serviceRegularPriceSummary(pricing) {
+  if (!pricing.regularBaseEur) return "";
+  const base = `€${pricing.regularBaseEur} · ${formatToman(pricing.regularBaseToman)}`;
+  return pricing.regularAdditionalEur
+    ? `${base}; + €${pricing.regularAdditionalEur} · ${formatToman(pricing.regularAdditionalToman)} for each additional friend or partner`
+    : base;
+}
+
+function servicePriceDetails(pricing) {
+  const current = servicePriceSummary(pricing);
+  return pricing.discountPercent ? `${current} (${pricing.discountPercent}% discount from ${serviceRegularPriceSummary(pricing)})` : current;
+}
+
 function servicePriceFor(serviceId) {
   const service = SERVICE_OPTIONS.find((option) => option.id === serviceId);
-  return servicePriceSummary(service.pricing);
+  return servicePriceDetails(service.pricing);
 }
 
 function profileContactValue(profile, key, fallback) {
@@ -953,10 +971,12 @@ function ServicesPage({ data, notify }) {
               <span className="service-offer-eyebrow">{eyebrow}</span>
               <h3>{title}</h3>
               <div className="service-offer-price">
+                {pricing.discountPercent ? <span className="service-offer-discount">{pricing.discountPercent}% discount</span> : null}
                 <strong>€{pricing.baseEur}</strong>
                 <small>{formatToman(pricing.baseToman)}</small>
               </div>
               {pricing.additionalEur ? <span className="service-offer-modifier">+ €{pricing.additionalEur} / additional friend or partner · + {formatToman(pricing.additionalToman)} each</span> : null}
+              {pricing.regularBaseEur ? <del className="service-offer-regular">Regularly €{pricing.regularBaseEur} + €{pricing.regularAdditionalEur} per additional friend or partner</del> : null}
               {pricing.firstMeetingFree ? <span className="service-offer-note">First meeting free to evaluate your situation.</span> : null}
               <p>{description}</p>
               <button className="text-action service-offer-action" type="button" onClick={() => chooseService(id)}>Prepare a request <ArrowRight size={16} /></button>
@@ -972,7 +992,7 @@ function ServicesPage({ data, notify }) {
             <span className="service-launch-label">Selected support</span>
             <div className={`service-launch-service service-launch-service-${selectedService.accent}`}>
               <span className="service-launch-icon"><SelectedServiceIcon size={24} weight="duotone" /></span>
-              <span><strong>{selectedService.title}</strong><small>{selectedService.description}</small><em className="service-launch-price">{servicePriceSummary(selectedService.pricing)}</em></span>
+              <span><strong>{selectedService.title}</strong><small>{selectedService.description}</small><em className="service-launch-price">{servicePriceSummary(selectedService.pricing)}</em>{selectedService.pricing.discountPercent ? <small className="service-launch-discount">{selectedService.pricing.discountPercent}% discount · regularly {serviceRegularPriceSummary(selectedService.pricing)}</small> : null}</span>
             </div>
             <div className="service-profile-summary"><span className="service-profile-summary-label"><UsersThree size={17} />Using your saved profile</span><div className="service-profile-pills">{profileFields.map(([label, value]) => <span key={label}><strong>{label}</strong>{value}</span>)}</div></div>
           </div>

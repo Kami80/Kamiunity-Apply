@@ -37,6 +37,6 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Current services and pricing
 
-- The Services page currently offers Resume / CV building for €30, including a polished PDF, editable TeX source, and a session teaching the student how to edit the resume; SOP writing support for €30, beginning with a private background discussion; a combined Resume + SOP package for €50; and Application mentoring for €100 plus €50 for each additional friend or partner.
+- The Services page currently offers Resume / CV building for €30, including a polished PDF, editable TeX source, and a session teaching the student how to edit the resume; SOP writing support for €30, beginning with a private background discussion; a combined Resume + SOP package for €50; and Application mentoring at a discounted €100 plus €50 for each additional friend or partner, reduced from the regular €200 plus €100 rate.
 - Mentoring copy should explain that the first meeting is free for evaluating the student’s situation, followed by one online session per month, an individual question group for the student and their friends or partners, and access to a private community of students mentored by the same person who may share destinations, application partners, and relevant meetings.
 - The locked profile page should say “Full access with mentoring package” and the Mentoring package should explicitly include full access to the Apply Application workspace.
